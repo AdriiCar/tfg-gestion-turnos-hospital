@@ -1,0 +1,100 @@
+COLECCIONES
+
+1.Colección Usuario
+{
+    _id: ObjectId(),
+    nombre: string,
+    apellido: string,
+    correo: string,
+    rol: string ,
+    nivel: string,
+    datosContractuales: {
+        fechaInicio: ISODate,
+        fechaFin: Puede ser nulo,
+        horasContrato: int,
+        diasLibresAnuales: int
+    },
+    estadoActual : {
+        horasRealizadas: int,
+        balanceAnual: int,
+        horasPrevistas: int,
+        diasLibresRestantes: int
+    }
+}
+
+O bien añado a un usuario sus solicitudes o bien hago una coleccion separada
+
+2.Colección Solicitudes
+{
+    _id: ObjectId(),
+    usuarioId: ObjectId(),
+    tipoDia: string -> vacaciones, asuntosPropios...
+    fechaInicio: ISODate
+    fechaFin: puede ser igual a la fecha inicio si es solo un dia
+    fechaSolicitud: para calcular si se pasan los cinco dias y se aprueba automaticamente
+    comentarios: string, 
+    estado : string
+    sustitutoId: ObjectId() -> si es aprobada y el supervisor le asigno un sustituto
+}
+Tiempo restante se obtiene del dia actual y de la fechaSolicitud
+
+
+3.Colección Planilla Anual 
+{
+    _id: ObjectId(),
+    usuarioId: ObjectId(),
+    año: int
+    meses: {
+        1: [
+            {dia : 1, turno: L}
+            {dia: 2, turno: M}
+        ],
+        2: [
+            {dia: 1, turno: N}
+        ]
+    }
+}
+
+4.Colección Rotaciones
+{
+    _id: ObjectId(),
+    nombre: string,
+    patron: [N, L, M, N,L]
+    diasDesfase: int,
+    empleados:[
+        ObjectId(),
+        ObjectId()
+    ]
+}
+
+5.Colección Incidencias
+{
+    _id: ObjectId(),
+    fecha: ISODate,
+    turno: "M",
+    tipoIncidencia: "Falta de descanso Legal", "Falta de cobertura en planta", "Falta de personal con experiencia",
+    mensaje: string,
+    resuelta: booleano
+    resolucion: {
+        sustituto: ObjectId,
+        sustituido: ObjectId
+    } 
+}
+
+6.Colección Configuracion Algoritmo 
+{
+    _id: ObjectId(),
+    reglasLegales:{
+        descansoMinimo: int,
+        descansoActivo: booleano,
+        computoActivo: booleano
+    },
+    coberturaPlanta: {
+        mañana: {enfermeros: int, auxiliares: int},
+        tarde: {enfermeros: int, auxiliares: int}
+    },
+    balance:{
+        evitarTodoNuevos: booleano,
+        hardConstraint: int
+    }
+}

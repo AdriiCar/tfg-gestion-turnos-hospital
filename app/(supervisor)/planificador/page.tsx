@@ -1,12 +1,12 @@
 "use client"
 
-import { Box, Flex, Heading, Text, Card, Button, Table, Badge, Dialog, RadioGroup, TextField } from "@radix-ui/themes";
-import { CaretDownIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { Box, Flex, Heading, Text, Card, Button, Table, Badge, Dialog, RadioGroup, TextField, Switch, Grid, Separator, Checkbox, Slider } from "@radix-ui/themes";
+import { CaretDownIcon, Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import {useState} from "react";
 import { BackpackIcon, MoonIcon, SunIcon } from "lucide-react";
 
 
-// --- INTERFACES ---
+//INTERFACES
 interface Empleado {
     id: number;
     nombre: string;
@@ -165,7 +165,20 @@ export default function DashboardPlanificador(){
         }
         setOpenSustitutoDialog(false);
     }
-    
+
+
+    //LOGICA DE CONFIGURACION REGLAS DEL ALGORITMO
+
+    const [dialogoConfiguracion, setDialogoConfiguracion] = useState <boolean>(false)
+    const [reglaDescanso, setReglaDescanso] = useState<boolean>(true)
+    const[reglaHoras, setReglaHoras] = useState<boolean>(true)
+    const[evitarNuevos, setEvitarNuevos] = useState<boolean>(true)
+    const [balanceoAlgoritmo, setBalanceoAlgoritmo] = useState<number[]>([50])
+
+    const [enfermerosM, setEnfermerosM] = useState<string>("2")
+    const [enfermerosT, setEnfermerosT] = useState<string>("2")
+    const [auxiliaresM, setAuxiliaresM] = useState<string>("2")
+    const [auxiliaresT, setAuxiliaresT] = useState<string>("2")
 
     return(
         //Contenedor de la vista
@@ -321,6 +334,7 @@ export default function DashboardPlanificador(){
                             borderRadius: "6px",
                             cursor: "pointer"
                         }}
+                        onClick={()=> setDialogoConfiguracion(true)}
                     >
                         <Flex direction="column" align="center">
                             <Text weight="bold" size="3">Generar</Text>
@@ -453,7 +467,137 @@ export default function DashboardPlanificador(){
                 </Dialog.Content>
             </Dialog.Root>
 
+            
+
+            <Dialog.Root open={dialogoConfiguracion} onOpenChange={setDialogoConfiguracion}>
+                <Dialog.Content style={{maxWidth:550, padding:"0"}}>
+
+                    <Box p="5">
+                        {/*Titulo y cruz de cierre */}
+                        <Flex justify="between" align = "center" mb="4">
+                            <Dialog.Title size="5" style={{color:"#6B7280"}}>Reglas Legales y Obligatorias</Dialog.Title>
+                            <Dialog.Close>
+                                <Cross2Icon color="red" style={{ cursor: "pointer", width: "25px", height: "25px" }} />
+                            </Dialog.Close>
+                        </Flex>
+
+                        {/*Reglas legales*/}
+                        <Flex direction="column" gap="4">
+                            {/*Fila 1*/}
+                            <Flex align = "center" gap="4">
+                                <Text size="2" style={{width: 200}}>Descanso mínimo entre turnos:</Text> {/*Con el width alineamos los componentes*/}
+                                <Badge size="3" color="gray" variant="soft">12 horas</Badge>
+                                <Switch color="green" checked={reglaDescanso} onCheckedChange={setReglaDescanso}></Switch>
+                                <Text size="2" weight="bold">{reglaDescanso ? "ON" : "OFF"}</Text>
+                            </Flex>
+
+                            {/*Fila 2*/}
+                            <Flex align ="center" gap="4">
+                                <Text size="2" style={{width: 200}}>Cómputo anual:</Text>
+                                <Badge size="3" color="gray" variant="soft" >1492 horas</Badge>
+                                <Switch color="green" checked={reglaHoras} onCheckedChange={setReglaHoras}></Switch>
+                                <Text size="2" weight="bold">{reglaHoras ? "ON" : "OFF"}</Text>
+                            </Flex>
+                            
+                            {/*Cobertura minima*/}
+                            <Flex align="center" gap="4">
+                                <Text size="2" style={{width: 200}}>Cobertura Mínima:</Text>
+                                 {/*Tabla con los datos*/}
+                                <Box style={{flex:1}}>
+                                    {/*Fila 1*/}
+                                    <Grid columns="3" gap="2" mb="2" align="center">
+                                        <Text></Text>
+                                        <Text size="1" weight="bold" color="gray" align="center">Enfermeros</Text>
+                                        <Text size="1" weight="bold" color="gray" align="center">Auxiliares</Text>
+                                    </Grid>
+                                    {/*Fila 2*/}
+                                     <Grid columns="3" gap="2" mb="2" align="center" style={{ backgroundColor: "#FEF08A", padding: "8px", borderRadius: "4px" }}>
+                                        <Text size="2" weight="bold" style={{color:"#000"}} >Mañana</Text>
+                                        <TextField.Root
+                                            type="number"
+                                            size="1"
+                                            variant="surface"
+                                            value={enfermerosM}
+                                            onChange={(e) => (setEnfermerosM(e.target.value))}
+                                            style={{ backgroundColor: "white", textAlign: "center" }} 
+                                        />
+                                        <TextField.Root
+                                            type="number"
+                                            size="1"
+                                            variant="surface"
+                                            value={auxiliaresM}
+                                            onChange={(e) => (setAuxiliaresM(e.target.value))}
+                                            style={{ backgroundColor: "white", textAlign: "center" }} 
+                                        />                                    
+                                    </Grid>
+
+                                    {/*Fila 3*/}
+                                     <Grid columns="3" gap="2" mb="2" align="center" style={{ backgroundColor: "#4F86D9", padding: "8px", borderRadius: "4px" }}>
+                                        <Text size="2" weight="bold" style={{color:"#000"}} >Noche</Text>
+                                        <TextField.Root
+                                            type="number"
+                                            size="1"
+                                            variant="surface"
+                                            value={enfermerosT}
+                                            onChange={(e) => (setEnfermerosT(e.target.value))}
+                                            style={{ backgroundColor: "white", textAlign: "center" }} 
+                                        />
+                                        <TextField.Root
+                                            type="number"
+                                            size="1"
+                                            variant="surface"
+                                            value={auxiliaresT}
+                                            onChange={(e) => (setAuxiliaresT(e.target.value))}
+                                            style={{ backgroundColor: "white", textAlign: "center" }} 
+                                        />                                    
+                                    </Grid>
+                                </Box>
+                            </Flex>
+                        </Flex>
+
+                        <Separator size="4" my="5"/>
+
+                        {/*Restricciones de la plata*/}
+                        <Heading size="5" style={{color:"#6B7280"}}>Restricciones de Planta</Heading>
+                        <Flex direction="column"  gap="5">
+
+                            <Flex align="center" gap="4">
+                                <Text size="2" style={{width:240}}>Evitar turnos con solo personal nuevo</Text>
+                                <Checkbox size="2" checked={evitarNuevos} onCheckedChange={(checked) => setEvitarNuevos(checked===true)}/>
+                            </Flex>
+
+                            <Box>
+                                <Text size="2" mb="3" as="div">Balanceo del algoritmo:</Text>
+                                <Flex align="center" gap="3" mt="2">
+                                    <Text size="2" style={{width: "90px", lineHeight: "1.2"}}>Satisfacer Preferencias</Text>
+                                    <Box style={{flex:1}}>
+                                        <Slider
+                                            defaultValue={[50]}
+                                            value={balanceoAlgoritmo}
+                                            onValueChange={setBalanceoAlgoritmo}
+                                            color="gray"
+                                        />
+                                    </Box>
+                                    <Text size="2" style={{ width: "90px", lineHeight: "1.2" }}>Equidad Horas Cómputo</Text>
+                                </Flex>
+                            </Box>
+                        </Flex>
+
+                        {/*Boton de generar*/}
+                        <Flex justify="center" mt="6">
+                            <Button
+                                size="3"
+                                style={{ backgroundColor: "#0088CC", cursor: "pointer", width: "160px" }}
+                                onClick={()=>setDialogoConfiguracion(false)}
+                            >
+                                Generar
+                            </Button>
+                        </Flex>
                         
+                    </Box>
+                </Dialog.Content>
+            </Dialog.Root>
+
         </Box>
     )
 }

@@ -1,6 +1,6 @@
-"use client"; // <--- OBLIGATORIO: Porque vamos a preguntar al navegador la URL
+"use client"; 
 
-import { usePathname } from "next/navigation"; // El gancho mágico
+import { usePathname } from "next/navigation";
 import { Flex, Button, Text } from "@radix-ui/themes";
 import Link from "next/link";
 import { 
@@ -19,11 +19,10 @@ const menuItems = [
   ];
 
 export function SidebarMenu() {
-  const pathname = usePathname(); // Aquí guardamos la ruta actual (ej: "/calendario")
+  const pathname = usePathname(); // Aquí guardamos la ruta actual
   return (
     <Flex direction="column" gap="2">
       {menuItems.map((item) => {
-        // LA LÓGICA CLAVE: ¿Es esta la página actual?
         const isActive = pathname === item.href; 
 
         return (

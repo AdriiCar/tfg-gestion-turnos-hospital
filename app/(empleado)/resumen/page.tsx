@@ -1,19 +1,23 @@
 // app/resumen/page.tsx
 "use client";
 
-import { Box, Grid, Card, Text, Heading, Badge, Button, Flex, Separator } from "@radix-ui/themes";
+import { Box, Grid, Card, Text, Heading, Badge, Button, Flex, Separator, Dialog } from "@radix-ui/themes";
+import { useState } from "react";
 
-// --- MOCK DATA (datos de prueba) ---
-type ColorEstado = "green" | "orange" | "red" | "blue" | "gray";
+type ColorEstado = "green" | "orange" | "red" | "gray";
 
+type EstadoSolicitud = "Pendiente" | "Aprobado" | "Rechazado";
+
+//INTERFACES
 interface Solicitud {
     id: number;
     tipoDia: string,
     diaPedido: string,
     fechaSolicitado: string,
-    estado: string;
-    color: ColorEstado 
-}
+    estado: EstadoSolicitud
+  }
+
+//MOCK DATA
 const usuario = { 
   balance: 8.0, 
   horasRealizadas: 1212, 
@@ -32,20 +36,50 @@ const solicitudes: Solicitud[] = [
     tipoDia: "Día de Libre Disposición",
     diaPedido: "20 Feb", 
     fechaSolicitado: "Solicitado el 15 Nov", 
-    estado: "Aprobado", 
-    color: "green" // Si escribes "verde" aquí, te dará error (¡eso es bueno!)
+    estado: "Aprobado"
   },
   { 
     id: 2, 
     tipoDia: "Vacaciones",
     diaPedido: "1 Jul - 15 Jul", 
     fechaSolicitado: "Solicitado 1 Feb", 
-    estado: "Pendiente", 
-    color: "orange" 
+    estado: "Pendiente"
   }
 ];
 
+const getColorEstado = (estado: EstadoSolicitud): ColorEstado =>{
+  switch(estado){
+    case "Aprobado": return "green";
+    case "Pendiente": return "orange";
+    case "Rechazado": return "red";
+    default: return "gray";
+  }
+}
+
+
 export default function DashboardResumen() {
+
+  const [dialogoBorrar, setDialogoBorrar] = useState<boolean>(false)
+  
+  const[listaSolicitudes, setListaSolicitudes] = useState<Solicitud[]>(solicitudes)
+
+  const [solicitudSeleccionada, setSolicitudSeleccionada] = useState<number | null>(null)
+  const abrirDialogoBorrar = (id: number) => {
+    setSolicitudSeleccionada(id)
+    setDialogoBorrar(true)
+
+  }
+
+  const borrarSolicitud = () =>{
+    if(solicitudSeleccionada === null)return;
+
+    const nuevaLista = listaSolicitudes.filter(sol => sol.id !== solicitudSeleccionada);
+    setListaSolicitudes(nuevaLista);
+    setSolicitudSeleccionada(null);
+    setDialogoBorrar(false);
+
+  }
+
   return (
     <Box p="6" style={{ maxWidth: "1000px" }}> {/* Contenedor limitado */}
       
@@ -87,7 +121,9 @@ export default function DashboardResumen() {
       {/**Seccion Solicitudes */}
       <Heading size="4" mb="3"> Mis Solicitudes Anuales</Heading>
       <Card style={{ padding: "0px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)"}}>
-            {solicitudes.map((solicitud, index) => (
+        {listaSolicitudes.length > 0 ? (
+
+          listaSolicitudes.map((solicitud, index) => (
                 <Box key = {solicitud.id}>
                     <Flex justify="between" align="center" p="4">
                         <Box>
@@ -97,7 +133,7 @@ export default function DashboardResumen() {
                         <Flex align="center" gap="4">
                             <Badge
                              variant="soft"  //color suabe
-                             color={solicitud.color} //cambia de color segun el botón
+                             color={getColorEstado(solicitud.estado)} //cambia de color segun el botón
                              size="3" //tamaño
                              radius="full" //para que sea redondeado
                              style={{padding: "5px 15px"}}  
@@ -106,17 +142,44 @@ export default function DashboardResumen() {
                             </Badge>
                         {/*Añadimo el boton de poder cancelar si esta solicitud esta pendiente de ser aprobada*/}
                         {solicitud.estado === "Pendiente" &&(
-                            <Button variant="soft" style={{color: "#500e0e", backgroundColor: "#CD4444"}}>
+                            <Button
+                              variant="soft"
+                              style={{color: "#500e0e", backgroundColor: "#CD4444"}}
+                              onClick={() => abrirDialogoBorrar(solicitud.id)}
+                              >
                                 Cancelar
                             </Button>
                         )}
                         </Flex>
                     </Flex>
-                    {index < solicitudes.length-1 && <Separator size="4"></Separator>}
+                    {index < listaSolicitudes.length-1 && <Separator size="4"></Separator>}
                 </Box>
+            ))
+        ) : (
+          <Box p="5">
+              <Text color="gray" align="center" as="div">No tienes solicitudes pendientes ni aprobadas.</Text>
+          </Box>
 
-            ))}
+        )}
+            
       </Card>
+
+
+       {/*Dialogo borrar solicitud*/}
+      <Dialog.Root open={dialogoBorrar} onOpenChange={setDialogoBorrar}>
+          <Dialog.Content style={{maxWidth: 400}}>
+              <Dialog.Title size="5" mb="2" weight="bold" color="red">Cancelar Solicitud</Dialog.Title>
+              <Text size="3" mb="6" as="p">¿Seguro que quieres eliminar la solicitud? Esta acción no se puede deshacer.</Text>
+              <Flex gap="3" justify="end" mt="4">
+                  <Dialog.Close>
+                      <Button variant="soft" color="gray" style={{cursor:"pointer"}}>Cancelar</Button>
+                  </Dialog.Close>
+                  <Button onClick={borrarSolicitud} color="red" style={{cursor: "pointer", backgroundColor: "#DC2626"}}>
+                      Sí, Eliminar
+                  </Button>
+              </Flex>
+          </Dialog.Content>
+      </Dialog.Root>
     </Box>
   );
 }

@@ -5,7 +5,7 @@ import { Flex, Button, Text } from "@radix-ui/themes";
 import Link from "next/link";
 import { 
   CalendarIcon,   // Para Planificador
-  UpdateIcon,     // Para Rotación (flechas girando)
+  UpdateIcon,     // Para Rotación 
   ClipboardIcon,  // Para Gestor Solicitudes
   PersonIcon      // Para Personal
 } from "@radix-ui/react-icons";
@@ -23,7 +23,6 @@ export function SidebarMenuSupervisor() {
   return (
     <Flex direction="column" gap="2">
       {menuItems.map((item) => {
-        // LA LÓGICA CLAVE: ¿Es esta la página actual?
         const isActive = (pathname === item.href); 
 
         return (

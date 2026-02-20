@@ -8,6 +8,8 @@ type tipoTurno = "M" | "N" | "L";
 
 type colorRadix = "orange" | "blue" | "green";
 
+//INTERFACES
+
 interface Empleado {
     id:number;
     nombre:string;
@@ -320,7 +322,7 @@ export default function DashboardRotacion(){
                                                     onClick={() => abrirDialogoEliminar(grupo.id, usuario.id, usuario.nombre)}
                                                     size="3"
                                                     style={{ 
-                                                        backgroundColor: "#FDE68A", // Color beige/naranja de la foto
+                                                        backgroundColor: "#FDE68A", 
                                                         color: "#78350F", 
                                                         padding: "8px 15px",
                                                         borderRadius: "8px"

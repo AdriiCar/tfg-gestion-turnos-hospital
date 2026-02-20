@@ -44,13 +44,10 @@ export default function DashboardCalenadrio() {
     const diaSemana = getDay(fecha); // 0 es Domingo, 6 es Sábado
     const numeroDia = parseInt(format(fecha, "d")); // El número del día (1, 15, 23...)
 
-    // REGLA 1: Fines de semana siempre LIBRES
     if (diaSemana === 0 || diaSemana === 6) return "L";
 
-    // REGLA 2: Días pares -> MAÑANA
     if (numeroDia % 2 === 0) return "M";
 
-    // REGLA 3: Días impares -> NOCHE
     return "N";
 
   };
@@ -89,16 +86,16 @@ export default function DashboardCalenadrio() {
             {/* Parrilla de días */}
                 <Grid columns="7" gap="2">
                 {diasIntervalo.map((dia) => {
-                    // 1. Calculamos datos del día
+                    // Calculamos datos del día
                     const numeroDia = parseInt(format(dia, "d"));
                     const codigoTurno = calcularTurno(dia); // Devuelve "M", "N" o "L"
                     const config = configTurnos[codigoTurno]; // Obtenemos el color y label
                     
-                    // 2. Flags booleanos para el estilo
+                    // Flags booleanos para el estilo
                     const esMismoMes = isSameMonth(dia, fechaActual);
                     const esHoy = isSameDay(dia, new Date());
                     
-                    // 3. ¿Es Festivo? (Para cambiar el color de fondo)
+                   
                     // Solo marcamos festivo si es del mes actual 
                     const esFestivo = (numeroDia === 16 || numeroDia === 22) && esMismoMes;
                     

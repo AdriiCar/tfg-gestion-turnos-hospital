@@ -11,7 +11,6 @@ export default function EmpleadoLayout({ children }: { children: React.ReactNode
   return (
     <Flex style={{ height: "100vh", backgroundColor: "#F3F4F6" }}>
       
-      {/* BARRA LATERAL (SIDEBAR) */}
       <Box 
         style={{ 
           width: "250px", 
@@ -22,12 +21,10 @@ export default function EmpleadoLayout({ children }: { children: React.ReactNode
       >
         <Heading size="4" mb="5" color="blue">Gestor de turnos</Heading>
 
-        {/* AQUÍ VA TU NUEVO MENÚ INTELIGENTE */}
         <Box mb="6">
            <SidebarMenuSupervisor /> 
         </Box>
 
-        {/* ... resto del sidebar (Avatar, nombre, etc) ... */}
         <Flex align="center" gap="3" mt="auto" style={{ paddingTop: "20px", borderTop: "1px solid #eee" }}>
             <Avatar fallback={supervisor.icono} size="3" radius="full" color="blue" variant="soft"/>
             <Box>
@@ -38,7 +35,6 @@ export default function EmpleadoLayout({ children }: { children: React.ReactNode
 
       </Box>
 
-      {/* CONTENIDO PRINCIPAL */}
       <Box style={{ flex: 1, overflowY: "auto" }}>
         {children}
       </Box>

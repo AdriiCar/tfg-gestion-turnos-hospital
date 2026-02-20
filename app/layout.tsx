@@ -2,7 +2,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-// IMPORTANTE: Esta línea es la que hace que Radix se vea bien
 import '@radix-ui/themes/styles.css'; 
 import { Theme } from '@radix-ui/themes';
 
@@ -21,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className} style={{ margin: 0, padding: 0 }}>
-        {/* El Theme debe envolver todo */}
+
         <Theme appearance="light" accentColor="blue" radius="medium">
           {children}
         </Theme>

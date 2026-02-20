@@ -9,7 +9,7 @@ export default function DashboardSolicitudDia(){
     const[tipoDia, setTipoDia] = useState("libre-disposicion");
     const[fecha, setFecha] = useState("");
     const[comentario, setComentario] = useState("");
-    const[enviado, setEnviado] = useState(false); //por defecto no hemos pulsado el botón de envío de la solicitudç
+    const[enviado, setEnviado] = useState(false); //por defecto no hemos pulsado el botón de envío de la solicitud
     const fechaActual = new Date().toISOString().split("T")[0]; 
 
     const envioFormulario = (e: React.SubmitEvent) =>{
