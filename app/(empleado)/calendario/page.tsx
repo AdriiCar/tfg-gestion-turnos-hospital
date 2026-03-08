@@ -2,26 +2,39 @@
 
 import { Box, Button, Heading, Card, Flex, Text, Grid, Badge } from "@radix-ui/themes";
 import { ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
-import { addMonths, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, getDay, isSameDay, isSameMonth } from "date-fns";
-import {useState} from "react";
+import { addMonths,startOfDay, endOfDay, subMonths, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, getDay, isSameDay, isSameMonth, isWithinInterval } from "date-fns";
+import {useEffect, useState} from "react";
 import {es} from "date-fns/locale";
+import { useRouter } from "next/navigation";
+
 
 //COMPONENTES ESTÁTICOS
 
 //tipos de turnos
-type tipoTurnos  = "M" | "N" | "L";
+type tipoTurnos  = "M" | "N" | "L" | "BAJA";
 
 //necesario ya que es lo que espera el color del badge
-type colorBadge = "orange" | "blue" | "green";
+type colorBadge = "orange" | "blue" | "green" | "red";
 
 const configTurnos: Record<tipoTurnos, {label: string; color: colorBadge; colorFondo:string}> = {
   M: { label: "M", color: "orange", colorFondo: "#FEF3C7" },
   N: { label: "N", color: "blue", colorFondo: "#DBEAFE" },
   L: { label: "L", color: "green", colorFondo: "#D1FAE5" },
+  BAJA: { label: "Baja", color: "red", colorFondo: "#FEE2E2" },
 };
 
+interface Solicitud {
+    _id: string;
+    tipoDia: string;
+    fechaInicio: string;
+    fechaFin: string;
+    estado: string;
+}
 
 export default function DashboardCalenadrio() {
+
+
+    const router = useRouter();
 
     //COMPONENTES DINÁMICOS
 
@@ -39,18 +52,69 @@ export default function DashboardCalenadrio() {
 
     const diasIntervalo = eachDayOfInterval({start: primerDiaSemana, end: ultimoDiaSemana})
 
+    const [solicitudesAprobadas, setSolicitudesAprobadas] = useState<Solicitud[]>([]);
+    const [plantilla, setPlantilla] = useState<any>(null);
+
+    useEffect (() => {
+        const usuarioGuardado = localStorage.getItem("usuarioLogueado");
+        if(usuarioGuardado){
+            const usuario = JSON.parse(usuarioGuardado);
+            if(!usuario){
+                router.push("/login");
+                return;
+            }
+            fetch(`/api/solicitudes?usuarioId=${usuario._id}`)
+            .then(respuesta => respuesta.json())
+            .then((datos: Solicitud[]) => {
+                const aprobadas = datos.filter(sol=> sol.estado === "Aprobada");
+                setSolicitudesAprobadas(aprobadas);
+            });
+
+            const añoActual = fechaActual.getFullYear();
+            fetch(`/api/plantillas?usuarioId=${usuario._id}&año=${añoActual}`)
+            .then(respuesta => respuesta.json())
+            .then((datos) => {
+                setPlantilla(datos);
+            });
+        }else{
+            router.push("/login")
+        }
+    }, [router, fechaActual]);
+
+
     // Esta función decide qué turno toca según el día.
   const calcularTurno = (fecha: Date): tipoTurnos => {
-    const diaSemana = getDay(fecha); // 0 es Domingo, 6 es Sábado
-    const numeroDia = parseInt(format(fecha, "d")); // El número del día (1, 15, 23...)
+    if (!plantilla || !plantilla.meses) return "L";
 
-    if (diaSemana === 0 || diaSemana === 6) return "L";
+    const mesBuscado = fecha.getMonth() + 1;
+    const diaBuscado = fecha.getDate();
 
-    if (numeroDia % 2 === 0) return "M";
+    const mesEnPlantilla = plantilla.meses.find((m: any) => m.mes === mesBuscado);
+    
+    if (mesEnPlantilla) {
+        const diaEnPlantilla = mesEnPlantilla.dias.find((d: any) => d.dia === diaBuscado);
+        if (diaEnPlantilla && diaEnPlantilla.turno) {
+            return diaEnPlantilla.turno as tipoTurnos;
+        }
+    }
 
-    return "N";
-
+    return "L";
   };
+
+  const comprobarSolicitudDia = (dia: Date) => {
+    for (const sol of solicitudesAprobadas) {
+        //abarcamos todo el dia
+        const inicio = startOfDay(new Date(sol.fechaInicio));
+        const fin = endOfDay(new Date(sol.fechaFin));
+
+        if(isWithinInterval(dia, {start: inicio, end: fin}) || isSameDay(dia, fin)){
+            return sol;
+        }
+    }
+    return null;
+  };
+ 
+
 
   return (
     //Cuadro principal de la vista
@@ -97,19 +161,21 @@ export default function DashboardCalenadrio() {
                     
                    
                     // Solo marcamos festivo si es del mes actual 
-                    const esFestivo = (numeroDia === 16 || numeroDia === 22) && esMismoMes;
+                    const solicitudAprobada = comprobarSolicitudDia(dia);
                     
                     return (
                         //Contiene la caja en la que ira el dia y turno
                         <Card
-                            key = {dia.toISOString()}
+                            key = {format(dia, "yyyy-MM-dd")}
                             variant="surface"
                             style={{
                                 minHeight: "80px",
                                 opacity: esMismoMes ? 1 : 0.4,
-                                border: esHoy ? "2px solid #3B82F6" : undefined,
-                                backgroundColor: esFestivo ? "#64748B" : (esMismoMes ? "white" : "#F9FAFB")
-                                }}
+                                border: esHoy ? "2px solid #3B82F6" : 
+                                        solicitudAprobada ? "2px solid #8B5CF6" : undefined, // Borde morado si está aprobado
+                                backgroundColor: solicitudAprobada ? "#c6bef2" : // Fondo morado
+                                                (esMismoMes ? "white" : "#F9FAFB")
+                            }}
                         >
                         {/*Coloca el texto y el turno */}
                         <Flex direction="column" justify = "between" height="100%">
@@ -117,9 +183,15 @@ export default function DashboardCalenadrio() {
                                 {numeroDia}
                             </Text>
                             {/**Definimos el color de la letra, el texto y el color de fondo */}
-                            <Badge color={config.color} variant="soft" style={{width: "100%", justifyContent:"center", backgroundColor: config.colorFondo}}>
-                                {config.label}
-                            </Badge>
+                            {solicitudAprobada ? (
+                                    <Badge color="purple" variant="soft" style={{width: "100%", justifyContent:"center", textTransform: "capitalize"}}>
+                                        {solicitudAprobada.tipoDia === "Vacaciones" ? "Vac." : "Libre"}
+                                    </Badge>
+                                ) : (
+                                    <Badge color={config.color} variant="soft" style={{width: "100%", justifyContent:"center", backgroundColor: config.colorFondo}}>
+                                        {config.label}
+                                    </Badge>
+                                )}
                         </Flex> 
                         </Card>
                     ); 

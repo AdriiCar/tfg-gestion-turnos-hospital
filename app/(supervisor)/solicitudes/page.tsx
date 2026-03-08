@@ -1,126 +1,171 @@
 "use client"
 
 import { CheckIcon, ClockIcon, Cross2Icon, PersonIcon } from "@radix-ui/react-icons";
-import {Box, Heading, Table, Text, Card, Badge, Flex, Button, Avatar, Dialog, TextField } from "@radix-ui/themes";
-import { useState } from "react";
+import {Box, Heading, Table, Text, Card, Badge, Flex, Button, Avatar, Dialog, TextField, Callout } from "@radix-ui/themes";
+import { formatDistanceToNow, format, startOfDay } from "date-fns";
+import { useEffect, useState } from "react";
+import { es } from "date-fns/locale";
+import { InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
 
 //INTERFACES
-type EstadoSolicitud = "pendiente" | "aprobado" | "rechazado";
 
-type ColorEstado = "orange" | "red" | "green";
+type ColorEstado = "orange" | "red" | "green" | "gray";
 
 interface Solicitud{
-    id:number;
+    id:number | string;
     tipo:string;
     fechas:string;
-    estado:EstadoSolicitud;
+    estado:string;
     solicitante:string;
     sustituto?:string; //solo hay sustituto cuando se registre
     tiempoRestante?:string; //solo para las pendientes
+    fechaInicio?: string;
+    solicitanteRaw?: string;
 }
-
-
-//MOCK DATA
-
-const solicitudes_iniciales: Solicitud[] = [
-    {
-        id: 1,
-        tipo: "Libre Disposición",
-        fechas: "20 Dic",
-        estado: "pendiente",
-        solicitante: "Beatriz Gil",
-        tiempoRestante: "2 días 15 horas"
-    },
-    {
-        id: 2,
-        tipo: "Libre Disposición",
-        fechas: "22 Jun",
-        estado: "pendiente",
-        solicitante: "David Ruíz",
-        tiempoRestante: "1 día 11 horas"
-    },
-    {
-        id: 3,
-        tipo: "Vacaciones",
-        fechas: "1 Ago - 15 Ago",
-        estado: "aprobado",
-        solicitante: "Pedro Rodríguez",
-        sustituto: "Jose Gutierrez"
-    },
-    {
-        id: 4,
-        tipo: "Asuntos Propios",
-        fechas: "20 Sep",
-        estado: "rechazado",
-        solicitante: "Ana Martínez"
-    }
-]
 
 
 export default function DashboardSolicitudes(){
 
-    const[solicitudes, setSolicitudes] = useState<Solicitud[]>(solicitudes_iniciales);
+    const[solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
+    const [mensaje, setMensaje] = useState<{ texto: string, tipo: "error" | "exito" } | null>(null);
+
+    //cargamos todas las solicitudes iniciales
+    useEffect(() => {   
+        fetch("/api/solicitudes", {cache: 'no-store'})
+        .then(respuesta => respuesta.json())
+        .then(datos => {
+            if (Array.isArray(datos)) {
+                const solicitudesMapeadas = datos.map((sol: any) => ({
+                    id: sol._id,
+                    tipo: sol.tipoDia,
+                    fechas: formatearRangoFechas(sol.fechaInicio, sol.fechaFin),
+                    estado: sol.estado,
+                    solicitante: `${sol.usuarioId.nombre} ${sol.usuarioId.apellido}`,
+                    tiempoRestante: formatDistanceToNow(new Date(sol.fechaSolicitud), { addSuffix: true, locale: es}),
+                    sustituto: sol.sustitutoNombre || (sol.estado === "Aprobado" || sol.estado === "Aprobada" ? "Registrar Sustituto" : undefined),
+                    fechaInicio: sol.fechaInicio,
+                    solicitanteRaw: `${sol.usuarioId.nombre} ${sol.usuarioId.apellido}`
+                }));
+                
+                setSolicitudes(solicitudesMapeadas);
+            }
+        })
+        .catch(error => console.error("Error al cargar solicitudes:", error));
+    }, []);
 
     //ESTILO ESTADO DE LOS TURNOS
-    const getConfigEstado = (estado:EstadoSolicitud): {color: ColorEstado, label: string} => {
+    const getConfigEstado = (estado:string): {color: ColorEstado, label: string} => {
         switch(estado){
-            case "pendiente": return {color:"orange", label:"Pendiente"};
-            case "aprobado": return {color:"green", label: "Aprobado"};
-            case "rechazado": return {color:"red", label: "Rechazado"};
+            case "Pendiente": return {color:"orange", label:"Pendiente"};
+            case "Aprobada":
+            case "Aprobado": return {color:"green", label: "Aprobado"};
+            case "Rechazado": return {color:"red", label: "Rechazado"};
+            default: return {color:"gray", label: estado};
         }
     }
 
-    //APROBAR O RECHAZAR SOLICITUD
-    const gestionarSolicitud = (id:number, accion:EstadoSolicitud) => {
-        const nuevasSolicitudes = solicitudes.map(sol => {
-            if (sol.id === id) {
+    /*
+    const formatearRangoFechas = (inicio: string, fin: string) => {
+        const fechaIn = new Date(inicio).toLocaleDateString("es-ES", { day: 'numeric', month: 'short' });
+        const fechaFi = new Date(fin).toLocaleDateString("es-ES", { day: 'numeric', month: 'short' });
+        return fechaIn === fechaFi ? fechaIn : `${fechaIn} - ${fechaFi}`;
+    };
+    */
+    const formatearRangoFechas = (inicio: string, fin: string) => {
+        const fechaIn = format(startOfDay(new Date(inicio)), "d MMM", { locale: es });
+        const fechaFi = format(startOfDay(new Date(fin)), "d MMM", { locale: es });
+        return fechaIn === fechaFi ? fechaIn : `${fechaIn} - ${fechaFi}`;
+    };
 
-                return{
-                    ...sol,
-                    estado: accion,
-                    tiempoRestante: undefined,
-                    sustituto: accion === "aprobado" ? "Registrar Sustituto" : undefined
-                };
+    //APROBAR O RECHAZAR SOLICITUD
+    const gestionarSolicitud = async (id:number | string, accion:string) => {
+        try{
+            const respuesta = await fetch(`/api/solicitudes?id=${id}`,{
+                method: "PUT",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({estado:accion})
+            });
+
+            if(respuesta.ok){
+                const nuevasSolicitudes = solicitudes.map(sol => {
+                if (sol.id === id) {
+
+                    return{
+                        ...sol,
+                        estado: accion,
+                        tiempoRestante: undefined,
+                        sustituto: accion === "Aprobada" || accion === "Aprobado" ? "Registrar Sustituto" : undefined
+                    };
+                }
+                return sol;
+                })
+                setSolicitudes(nuevasSolicitudes);
+                setMensaje({texto:`Solicitud marcada como ${accion} exitosamente.`, tipo: "exito"});
+            }else{
+                setMensaje({texto: "Error al actualizar el estado de la solicitud", tipo: "error"});
             }
-            return sol;
-        })
-        setSolicitudes(nuevasSolicitudes);
+        }catch(error){
+            setMensaje({texto:"Error en la conexión",tipo:"error"})
+        }
     }
     
 
     //REGISTRAR SUSTITUTO
     const [dialogoSustituto, setDialogoSustituto] = useState<boolean>(false);
     const[datosSustituto, setDatosSustituto] = useState <{nombre: string, correo:string}> ({nombre:"", correo:""});
-    const [solicitudEditada, setSolicitudEditata] = useState<number | null>(null);
+    const [solicitudEditada, setSolicitudEditata] = useState<number | string | null>(null);
 
 
-    const abrirDialogoSustituto =(idSolicitud:number) =>{
+    const abrirDialogoSustituto =(idSolicitud:number | string) =>{
         setDatosSustituto({nombre:"", correo:""});
         setSolicitudEditata(idSolicitud);
         setDialogoSustituto(true);
     }
 
-    const registrarSustituto = () =>{
+    const registrarSustituto = async () =>{
         if(solicitudEditada === null) return;
 
         if(!datosSustituto.nombre || !datosSustituto.correo){
-            alert("Datos del sustituto incompletos");
+            setMensaje({texto: "Por favor completa todos los campos", tipo:"error"});
             return;
         }
+        try{
+            const solicitudActual = solicitudes.find(s => s.id === solicitudEditada);
 
-        const nuevasSolicitudes = solicitudes.map(sol => {
-            //si coincide cambiamos los datos del sustituto sino lo dejamos tal cual
-            if(sol.id == solicitudEditada){
-                return {
-                    ...sol,
-                    sustituto: datosSustituto.nombre
-                };
-            }
-            return sol;
-        })
+            const respuesta = await fetch(`/api/sustituciones`,{
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                fecha: solicitudActual?.fechaInicio || new Date().toISOString(),
+                turno: "M", 
+                sustituido: solicitudActual?.solicitanteRaw,
+                sustitutoNombre: datosSustituto.nombre, 
+                sustitutoCorreo: datosSustituto.correo,
+                solicitudId: solicitudEditada
+            })
+            });
 
-        setSolicitudes(nuevasSolicitudes);
-        setDialogoSustituto(false);
+            if(respuesta.ok){
+                const nuevasSolicitudes = solicitudes.map(sol => {
+                //si coincide cambiamos los datos del sustituto sino lo dejamos tal cual
+                if(sol.id == solicitudEditada){
+                    return {
+                        ...sol,
+                        sustituto: datosSustituto.nombre
+                    };
+                }
+                return sol;
+                })
+                setSolicitudes(nuevasSolicitudes);
+                setMensaje({texto: "Sustituto registrado con éxito", tipo:"exito"});
+            }else{
+                setMensaje({texto:"El sustituto no puedo ser registrado", tipo:"error"});
+            }       
+        }catch(error){
+            setMensaje({texto: "Fallo al conectar con el servidor", tipo: "error"});
+        }finally{
+             setDialogoSustituto(false);    
+        }
     }
 
     
@@ -128,7 +173,18 @@ export default function DashboardSolicitudes(){
     return(
         <Box p="6">
             <Heading size="6" mb="5" style={{color:"#1F2937"}}>Gestor Solicitudes</Heading>
-            
+            {mensaje && (
+                <Box mb="5">
+                    <Callout.Root color={mensaje.tipo === "error" ? "red" : "green"} variant="soft">
+                        <Callout.Icon>
+                            {mensaje.tipo === "error" ? <InfoCircledIcon /> : <CheckCircledIcon />}
+                        </Callout.Icon>
+                        <Callout.Text>
+                            {mensaje.texto}
+                        </Callout.Text>
+                    </Callout.Root>
+                </Box>
+            )}
             {/*TABLA DE CONTENIDOS*/}
             <Card size="4" style={{padding: "0", boxShadow:"0 apx 6px -1px rgba(0,0,0,0.1)" }}>
 
@@ -165,14 +221,14 @@ export default function DashboardSolicitudes(){
                                     </Table.Cell>
 
                                     <Table.Cell>
-                                        {solicitud.estado == "pendiente" ? (
+                                        {solicitud.estado == "Pendiente" ? (
                                             <Flex gap="2">
                                                 <Button 
                                                  size="1"
                                                  variant="solid"
                                                  color="green"
                                                  style={{cursor:"pointer"}}
-                                                 onClick={() => gestionarSolicitud(solicitud.id, "aprobado")}
+                                                 onClick={() => gestionarSolicitud(solicitud.id, "Aprobada")}
                                                  >
                                                     <CheckIcon/>
                                                  </Button>
@@ -182,7 +238,7 @@ export default function DashboardSolicitudes(){
                                                     variant="solid"
                                                     color="red"
                                                     style={{cursor:"pointer"}}
-                                                    onClick={() => gestionarSolicitud(solicitud.id, "rechazado")}
+                                                    onClick={() => gestionarSolicitud(solicitud.id, "Rechazado")}
                                                 >
                                                     <Cross2Icon/>
                                                 </Button>
@@ -199,7 +255,7 @@ export default function DashboardSolicitudes(){
 
                                     <Table.Cell>
                                         {/*Si esta aprobada bien hay que registrarlo o bien se puede modificar el añadido*/}
-                                        {solicitud.estado === "aprobado" ? (
+                                        {solicitud.estado === "Aprobado" || solicitud.estado === "Aprobada" ? (
                                             <Flex 
                                                 align="center"
                                                 gap="2" 
@@ -223,7 +279,7 @@ export default function DashboardSolicitudes(){
                                     </Table.Cell>
                                     
                                     <Table.Cell>
-                                        {solicitud.estado === "pendiente" ? (
+                                        {solicitud.estado === "Pendiente" ? (
                                             <Flex align="center" gap="1">
                                                 <ClockIcon color="gray"/>
                                                 <Text size="2" color="gray">{solicitud.tiempoRestante}</Text>

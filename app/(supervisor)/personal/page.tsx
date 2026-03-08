@@ -1,14 +1,15 @@
 "use client"
 
 import { CheckIcon, Cross1Icon, Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { Box, Heading, IconButton, Table, Text, Flex, Button, Card, Dialog, Grid, TextField, Separator } from "@radix-ui/themes";
+import { Box, Heading, IconButton, Table, Text, Flex, Button, Card, Dialog, Grid, TextField, Separator, Callout } from "@radix-ui/themes";
 import { BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine, Cell, Bar } from "recharts";
+import { InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 //INTERFACES
 interface Empleado{
-    id: number,
+    id: string, 
     nombre: string,
     apellidos: string,
     correo:string,
@@ -22,24 +23,40 @@ interface Empleado{
     fechaFin?: string
 }
 
-//MOCK DATA
-
-const lista_personal:Empleado[] = [
-    { id: 1, nombre: "Ana", apellidos: "López Olmo", correo: "analo@gmail.com", rol: "Enfermero", contrato: 1492, previstas: 1492, balance: 0, actuales: 1190, nivel: "Senior" },
-    { id: 2, nombre: "Bea", apellidos: "Gil Gómez",correo: "beagi@gmail.com", rol: "Enfermero", contrato: 1492, previstas: 1500, balance: 8, actuales: 1250, nivel: "Junior" },
-    { id: 3, nombre: "David", apellidos: "Ruíz Sanchez", correo: "darui@gmail.com", rol: "Auxiliar", contrato: 1492, previstas: 1470, balance: -22, actuales: 1175, nivel: "Senior" },
-    { id: 4, nombre: "Elena", apellidos: "Mayor",correo: "elenma@gmail.com", rol: "Enfermero", contrato: 1492, previstas: 1492, balance: 0, actuales: 1200, nivel: "Senior" },
-    { id: 5, nombre: "Francisca", apellidos: "Pérez", correo: "franpe@gmail.com", rol: "Auxiliar", contrato: 1492, previstas: 1505, balance: 13, actuales: 1300, nivel: "Junior" },
-    { id: 6, nombre: "Carlos", apellidos: "Vega", correo: "carlve@gmail.com", rol: "Auxiliar", contrato: 1492, previstas: 1480, balance: -12, actuales: 1100, nivel: "Medio" },
-    { id: 7, nombre: "Laura", apellidos: "Mendiola", correo: "laume@gmail.com", rol: "Enfermero", contrato: 1492, previstas: 1498, balance: 6, actuales: 1210, nivel: "Senior" },
-    { id: 8, nombre: "Marcos", apellidos: "Sanz", correo: "marcsa@gmail.com", rol: "Auxiliar", contrato: 1492, previstas: 1490, balance: -2, actuales: 1150, nivel: "Junior" },
-];
-
 
 export default function DashboardPersonal(){
 
+    const cargarUsuarios = async () => {
+        try {
+            const respuesta = await fetch("/api/usuarios");
+            const datos = await respuesta.json();
+            const empleados = datos.map((empleado: any) => ({
+                id: empleado._id, 
+                nombre: empleado.nombre,
+                apellidos: empleado.apellido, 
+                correo: empleado.correo,
+                rol: empleado.rol,
+                contrato: empleado.datosContractuales?.horasContrato || 0,
+                previstas: empleado.estadoActual?.horasPrevistas || 0,
+                balance: empleado.estadoActual?.balanceAnual || 0,
+                actuales: empleado.estadoActual?.horasRealizadas || 0,
+                nivel: empleado.nivel,
+                fechaInicio: empleado.datosContractuales?.fechaInicio?.split("T")[0]
+            })); 
+            setListaPersonal(empleados);
+        } catch (error) {
+            console.error("Error al cargar la lista de personal:", error);
+        }
+    };
+
+    useEffect(()=> {
+        cargarUsuarios();
+    }, []);
+
+
     //LOGICA DE AÑADIR USUARIO
-    const[listaPersonal, setListaPersonal] = useState<Empleado[]>(lista_personal);
+    const[listaPersonal, setListaPersonal] = useState<Empleado[]>([]);
+
     const[dialogoUsuario, setDialogoUsuario] = useState<boolean>(false);
 
     const[datosUsuario, setDatosUsuario] = useState({nombre: "", correo:"", rol: "Enfermero", fechaInicio: "", fechaFin: "", experiencia:"Senior"});
@@ -51,7 +68,8 @@ export default function DashboardPersonal(){
     }
 
      //LOGICA EDITAR USUARIO
-    const [idEditado, setIdEditado] = useState<number | null>(null);
+    const [idEditado, setIdEditado] = useState<string | null>(null);
+
     const abrirEditar = (empleado:Empleado) => {
         setIdEditado(empleado.id);
         setDatosUsuario({
@@ -67,10 +85,11 @@ export default function DashboardPersonal(){
     }
 
 
+     const [mensaje, setMensaje] = useState<{ texto: string, tipo: "error" | "exito" } | null>(null);
     //FUNCION PARA AÑADIR Y EDITAR
-    const guardarUsuario = ()=> {
+    const guardarUsuario = async()=> {
         if(!datosUsuario.correo || !datosUsuario.nombre){
-            alert("Completar los campos faltantes");
+            setMensaje({texto: "Por favor, completa el nombre y el correo", tipo: "error"});
             return;
         }
 
@@ -78,64 +97,123 @@ export default function DashboardPersonal(){
         const nombre = nombreCompleto[0];
         const apellido = nombreCompleto.slice(1).join(" ") || " ";
 
-
-        if(idEditado === null){
-            const nuevoEmpleado: Empleado = {
-                id: Date.now(),
-                nombre: nombre,
-                apellidos: apellido,
-                correo: datosUsuario.correo,
-                rol: datosUsuario.rol,
-                contrato: 1492,
-                actuales: 0,
-                balance: 0,
-                previstas: 1492,
-                fechaInicio: datosUsuario.fechaInicio,
-                fechaFin: datosUsuario.fechaFin,
-                nivel: datosUsuario.experiencia
-            }
-            setListaPersonal([...listaPersonal, nuevoEmpleado]);
-
-        }else{
-            const listaEmpleados = listaPersonal.map(empleado => {      
-                if(empleado.id === idEditado){
-                    return{
-                    ...empleado,
+        try{
+             if(idEditado === null){ //usamos post
+               const nuevoEmpleado = {
                     nombre: nombre,
-                    apellidos: apellido,
+                    apellido: apellido,
+                    correo: datosUsuario.correo,
+                    password: "123456",
+                    rol: datosUsuario.rol,
+                    nivel: datosUsuario.experiencia,
+                    datosContractuales: {
+                        horasContrato: 1492,
+                        fechaInicio: datosUsuario.fechaInicio || new Date(),
+                        fechaFin: datosUsuario.fechaFin || null
+                    },
+                    estadoActual: {
+                        horasPrevistas: 1492,
+                        horasRealizadas: 0,
+                        balanceAnual: 0,
+                        diasLibresRestantes: 6
+                    }
+                };
+
+                const respuesta = await fetch("/api/usuarios", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(nuevoEmpleado)
+                });
+
+                if(respuesta.ok){
+                    await cargarUsuarios();
+                    setMensaje({ texto: "¡Usuario creado con éxito!", tipo: "exito" });
+                }else{
+                    setMensaje({texto: "No se pudo añadir el usuario", tipo: "error"});
+                }
+            }
+            else{ //usamos el metodo PUT
+
+                const datosNuevos = {
+                    nombre: nombre,
+                    apellido: apellido,
                     correo: datosUsuario.correo,
                     rol: datosUsuario.rol,
-                    nivel: datosUsuario.experiencia
-                    };
-                }
-                return empleado;
-            });
-            setListaPersonal(listaEmpleados);
-        }
+                    nivel: datosUsuario.experiencia,
+                    "datosContractuales.fechaInicio": datosUsuario.fechaInicio,
+                    "datosContractuales.fechaFin": datosUsuario.fechaFin
+                };
 
-        setDialogoUsuario(false);
-    }
+                const respuesta = await fetch(`/api/usuarios?id=${idEditado}`,{
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosNuevos)
+                })
+
+                if(respuesta.ok){
+                    await cargarUsuarios();
+                    setMensaje({ texto: "¡Usuario actualizado correctamente!", tipo: "exito" });
+                }else{
+                    setMensaje({texto: "No se pudo modificar el usuario", tipo: "error"});
+                }
+            }
+            setDialogoUsuario(false);
+        }catch(error){
+            setMensaje({texto: "No se pudo establecer la conexion con el servidor", tipo:"error"});
+        }
+    };
 
     //LOGICA BORRAR USUARIO
     const[dialogoBorrar, setDialogoBorrar] = useState <boolean>(false);
-    const [usuarioBorrar, setUsuarioBorrar] = useState<{id:Number, nombre:string} | null> (null);
+    const [usuarioBorrar, setUsuarioBorrar] = useState<{id:string, nombre:string} | null> (null);
 
-    const confirmarBorrado = (id: number, nombre: string, apellido: string) => {
+    const confirmarBorrado = (id: string, nombre: string, apellido: string) => {
         setUsuarioBorrar({id, nombre: `${nombre} ${apellido}`});
         setDialogoBorrar(true);
     }
 
-    const borrarUsuario = () =>{
+    const borrarUsuario = async () =>{
         if(!usuarioBorrar) return;
-        setListaPersonal(listaPersonal.filter(emp => emp.id != usuarioBorrar.id))
-        setDialogoBorrar(false);
-        setUsuarioBorrar(null);
+
+        setMensaje(null);
+
+        try{
+            const respuesta = await fetch(`/api/usuarios?id=${usuarioBorrar.id}`,{
+                method: "DELETE"
+            });
+
+            if(respuesta.ok){
+                await cargarUsuarios();
+                setDialogoBorrar(false);
+                setUsuarioBorrar(null);
+
+                setMensaje({ texto: "¡Empleado eliminado correctamente!", tipo: "exito" }); 
+            }else{
+                setDialogoBorrar(false);
+                setMensaje({texto: "No se puedo completar el borrado en el servidor", tipo:"error"});
+            }
+        }catch(error){
+            setDialogoBorrar(false);
+            setMensaje({texto:"Fallo de conexión con el servidor", tipo:"error"});
+        }
     }
    
 
     return(
         <Box p="6">
             <Heading size="6" mb="5" style={{color: "#1F2937"}}>Gestión Personal</Heading>
+            {mensaje && (
+                      <Box mb="5">
+                          <Callout.Root color={mensaje.tipo === "error" ? "red" : "green"} variant="soft">
+                              <Callout.Icon>
+                                  {mensaje.tipo === "error" ? <InfoCircledIcon /> : <CheckCircledIcon />}
+                              </Callout.Icon>
+                              <Callout.Text>
+                                  {mensaje.texto}
+                              </Callout.Text>
+                          </Callout.Root>
+                      </Box>
+                  )}
 
             {/*TABLA DE EMPLEADOS*/}
             <Table.Root variant="surface">
@@ -202,23 +280,23 @@ export default function DashboardPersonal(){
                     <Heading size="4" mb="4" align="center">Balance de Horas del Equipo</Heading>
 
                     <div style={{width: "100%", height:400}}>
-                        <ResponsiveContainer width="100%" height="100%"> {/*adaptamos la gráfica al tamaño del contenedor*/}
+                        <ResponsiveContainer width="100%" height="100%" minWidth={10} minHeight={300}>
                             <BarChart
-                                layout="vertical" //creamos las arras horizontales
-                                data={listaPersonal} //la informacion sale de esta lista
+                                layout="vertical"
+                                data={listaPersonal}
                                 margin={{top: 5, right: 30, left: 20, bottom: 5}} 
                             >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
-                                <XAxis type="number" domain={['dataMin - 5', `dataMax + 5`]}/> {/*Definimos el valor de los datos mas grandes y pequeños*/}
-                                <YAxis dataKey="nombre" type="category" width={80}/> {/*Indicamos que se debe pintar el nombre y reservamos espacio para aquellos nombres mas largos*/}
-                                <Tooltip cursor={{fill:'transparent'}}/> {/*Diseño al pasar el raton*/}
-                                <ReferenceLine x={0} stroke={"#000"}/> {/*Linea que divide la gráfica en positivos y negativos*/}
+                                <XAxis type="number" domain={['dataMin - 5', `dataMax + 5`]}/>
+                                <YAxis dataKey="nombre" type="category" width={80}/>
+                                <Tooltip cursor={{fill:'transparent'}}/>
+                                <ReferenceLine x={0} stroke={"#000"}/>
                                 
-                                <Bar dataKey="balance" fill="#8884d8" barSize={20}> {/*La longitud depende del balacne y el grosor de 20px */}
-                                    {lista_personal.map((persona, indice) => (
+                                <Bar dataKey="balance" fill="#8884d8" barSize={20}>
+                                    {listaPersonal.map((persona, indice) => (
                                         <Cell
                                             key={`cell-${indice}`}
-                                            fill={persona.balance >= 0 ? "#4ADE80" : "#F87171"} //de un color u otro si es positivo o negativo
+                                            fill={persona.balance >= 0 ? "#4ADE80" : "#F87171"}
                                         />
 
                                     ))}
@@ -338,8 +416,8 @@ export default function DashboardPersonal(){
                     </Flex>
 
                     <Flex justify="center" mt="6">
-                        <Button size="3" style={{ backgroundColor: "#0088CC", width: "150px", cursor: "pointer" }} onClick={guardarUsuario}>
-                            Añadir
+                        <Button size="3" style={{ backgroundColor: "#0088CC", width: "200px", cursor: "pointer" }} onClick={guardarUsuario}>
+                            {idEditado === null ? "Añadir" : "Guardar Cambios"}
                         </Button>
                     </Flex>
                 </Dialog.Content>
@@ -349,7 +427,7 @@ export default function DashboardPersonal(){
             <Dialog.Root open={dialogoBorrar} onOpenChange={setDialogoBorrar}>
                 <Dialog.Content style={{maxWidth: 400}}>
                     <Dialog.Title size="5" mb="2" weight="bold" color="red">Eliminar Empleado</Dialog.Title>
-                    <Text size="3" mb="6" as="p">¿Seguro que quieres eliminar a <strong>{usuarioBorrar?.nombre}</strong>?</Text>
+                    <Dialog.Description size="3" mb="6">¿Seguro que quieres eliminar a <strong>{usuarioBorrar?.nombre}</strong>?</Dialog.Description>
                     <Flex gap="3" justify="end" mt="4">
                         <Dialog.Close>
                             <Button variant="soft" color="gray" style={{cursor:"pointer"}}>Cancelar</Button>

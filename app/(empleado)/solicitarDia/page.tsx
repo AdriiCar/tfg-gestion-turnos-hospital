@@ -1,36 +1,76 @@
 "use client";
 
-import { Box, Card, Text, Heading, Button, Flex, Select, TextField, TextArea } from "@radix-ui/themes";
-import {useState} from "react"
-import {CalendarIcon } from "@radix-ui/react-icons";
+import { Box, Card, Text, Heading, Button, Flex, Select, TextField, TextArea, Callout } from "@radix-ui/themes";
+import { useState } from "react";
+import { CalendarIcon, InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
+import { useRouter } from "next/navigation";
+<<<<<<< HEAD
+import { format } from "date-fns";
+=======
+>>>>>>> a2fa2a4496c3053af3162cb2e07925da6c79733d
 
 export default function DashboardSolicitudDia(){
     //Hook de estado con valor libre disposicion por defecto
-    const[tipoDia, setTipoDia] = useState("libre-disposicion");
+    const[tipoDia, setTipoDia] = useState("Libre Disposición");
     const[fecha, setFecha] = useState("");
     const[comentario, setComentario] = useState("");
     const[enviado, setEnviado] = useState(false); //por defecto no hemos pulsado el botón de envío de la solicitud
-    const fechaActual = new Date().toISOString().split("T")[0]; 
+    const fechaActual = format(new Date(), "yyyy-MM-dd");
 
-    const envioFormulario = (e: React.SubmitEvent) =>{
+    //Logica conexion BD
+    const router = useRouter();
+    const [mensaje, setMensaje] = useState<{ texto: string, tipo: "error" | "exito" } | null>(null);
+
+    const envioFormulario = async (e: React.SubmitEvent) =>{
         e.preventDefault(); //Eviar recarga automática de la pagina
 
         if(fechaActual > fecha){
-            alert(`ERROR: \n -Fecha solicitada: ${fecha} es anterior al dia de hoy ${fechaActual}`);
+            setMensaje({texto: `La fecha seleccionada (${fecha}) no puede ser anterior a hoy`, tipo: "error"});
             return;
         }
         setEnviado(true);
 
-        setTimeout(() =>{
-            alert(
-                `Solicitud Enviada: \n -Tipo de Día: ${tipoDia}\n -Fecha Solicitada: ${fecha}\n -Comentarios Añadidos: ${comentario}`
-            );
+        try{
+            const usuarioGuardado: any = localStorage.getItem("usuarioLogueado");
+
+            if(!usuarioGuardado){
+                setMensaje({texto:"Sesion expirada. Es necesario que vuelva a loguearse", tipo:"error"});
+                router.push("/login")
+<<<<<<< HEAD
+                return;
+=======
+>>>>>>> a2fa2a4496c3053af3162cb2e07925da6c79733d
+            }
+
+            const usuario = JSON.parse(usuarioGuardado);
+            const respuesta = await fetch("/api/solicitudes",{
+                method: 'POST',
+                headers: {'Content-Type': "application/json"},
+                body: JSON.stringify({
+                    usuarioId: usuario._id,
+                    tipoDia: tipoDia,
+                    fechaInicio: fecha,
+                    fechaFin: fecha,
+                    comentario: comentario,
+                    estado: "Pendiente"
+                })
+            });
+
+            if (respuesta.ok) {
+                setMensaje({ texto: "¡Solicitud enviada con éxito! Ya puedes verla en tu resumen.", tipo: "exito" });
+                
+                // Limpiamos los datos si ha ido bien
+                setTipoDia("Libre Disposición");
+                setComentario("");
+                setFecha("");
+            } else {
+                setMensaje({ texto: "Hubo un error en el envío de la solicitud", tipo: "error" });
+            }
+        }catch (error){
+            setMensaje({texto: "Error en la conexión con el servidor", tipo:"error"});
+        }finally{
             setEnviado(false); //una vez enviado lo ponemos a false para permitir nuevos envios
-            //Limpiamos todos los datos
-            setTipoDia("libre-disposicion");
-            setComentario("");
-            setFecha("");
-        }, 10);
+        }
     };   
 
     return (
@@ -44,7 +84,18 @@ export default function DashboardSolicitudDia(){
             </Box>
             {/*Ahora añdimos el card que contendrá el formulario*/}
              <Card size="4" style={{maxWidth: "650px", padding: "35px", margin:"0 auto"}}>
-
+                {mensaje && (
+                    <Box mb="5">
+                        <Callout.Root color={mensaje.tipo === "error" ? "red" : "green"} variant="soft">
+                            <Callout.Icon>
+                                {mensaje.tipo === "error" ? <InfoCircledIcon /> : <CheckCircledIcon />}
+                            </Callout.Icon>
+                            <Callout.Text>
+                                {mensaje.texto}
+                            </Callout.Text>
+                        </Callout.Root>
+                    </Box>
+                )}
                 <form onSubmit={envioFormulario}>
                     {/*Ordenamos en vertical los elementos del formulario que lo alinearemos con el flex en vertical*/}
                     <Flex direction="column" gap="5">
@@ -63,17 +114,17 @@ export default function DashboardSolicitudDia(){
                                         {/*Texto con el nombre del grupo*/}
                                         <Select.Label>Permisos Retribuidos</Select.Label>
                                         {/*Lista de opciones*/}
-                                        <Select.Item value="libre-disposicion">Día de Libre Disposición</Select.Item>
-                                        <Select.Item value="mudanza">Mudanza</Select.Item>
-                                        <Select.Item value="examen">Examen</Select.Item>
-                                        <Select.Item value="medico">Medico</Select.Item>
+                                        <Select.Item value="Libre Disposición">Día de Libre Disposición</Select.Item>
+                                        <Select.Item value="Mudanza">Mudanza</Select.Item>
+                                        <Select.Item value="Examen">Examen</Select.Item>
+                                        <Select.Item value="Médico">Medico</Select.Item>
                                         
                                         {/*Barra separadora*/}
                                         <Select.Separator/>
 
                                         <Select.Label>Ausencias</Select.Label>
-                                        <Select.Item value="ausencia-justificada">Ausencia Justificada</Select.Item>
-                                        <Select.Item value="indisposicion">Indisposicion (Sin baja)</Select.Item>
+                                        <Select.Item value="Ausencia Justificada">Ausencia Justificada</Select.Item>
+                                        <Select.Item value="Indisposición">Indisposicion (Sin baja)</Select.Item>
                                     </Select.Group>
                                 </Select.Content>
                             </Select.Root>

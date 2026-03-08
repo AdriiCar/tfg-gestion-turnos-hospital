@@ -22,7 +22,6 @@ COLECCIONES
     }
 }
 
-O bien añado a un usuario sus solicitudes o bien hago una coleccion separada
 
 2.Colección Solicitudes
 {
@@ -59,7 +58,7 @@ Tiempo restante se obtiene del dia actual y de la fechaSolicitud
 {
     _id: ObjectId(),
     nombre: string,
-    patron: [N, L, M, N,L]
+    patronBaseId: string
     diasDesfase: int,
     empleados:[
         ObjectId(),
@@ -84,17 +83,24 @@ Tiempo restante se obtiene del dia actual y de la fechaSolicitud
 6.Colección Configuracion Algoritmo 
 {
     _id: ObjectId(),
-    reglasLegales:{
-        descansoMinimo: int,
-        descansoActivo: booleano,
-        computoActivo: booleano
+    parametrosGlobales:{
+        horasTurnoM: int,
+        horasTurnoN: int
     },
     coberturaPlanta: {
         mañana: {enfermeros: int, auxiliares: int},
-        tarde: {enfermeros: int, auxiliares: int}
+        noche: {enfermeros: int, auxiliares: int}
     },
-    balance:{
-        evitarTodoNuevos: booleano,
-        hardConstraint: int
-    }
+    patronesBase: [
+        {
+            _idPatron: int,
+            nombre: string,
+            secuencia: [M,N,M,L,L]
+        },
+        {
+            _idPatron: int,
+            nombre: string,
+            secuencia: [M,L,L]
+        }
+    ]
 }

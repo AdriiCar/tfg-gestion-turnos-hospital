@@ -1,4 +1,6 @@
 "use client"
+//anaga@gmail.com  
+//ana
 
 import { useState } from "react";
 import { Box, Card, Flex, Heading, Text, TextField, Button, Tabs, Callout, Grid } from "@radix-ui/themes";
@@ -65,8 +67,8 @@ export default function Login() {
         setMensaje({texto: `Acceso correcto. ¡Bienvenido ${datos.usuario.nombre}`, tipo:"exito"});
         localStorage.setItem("usuarioLogueado", JSON.stringify(datos.usuario)); //almacenamos el usuario para usarlo en las siguientes vistas
 
-        if(datos.usuario.esSupervisor){
-          router.push("/planificador");
+        if(datos.usuario.rol === 'Supervisor'){
+          router.push("/admin");
         }
         else router.push("/resumen");
 

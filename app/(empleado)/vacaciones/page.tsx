@@ -1,8 +1,10 @@
 "use client";
 
-import { Box, Card, Text, Heading, Button, Flex, Select, TextField, TextArea } from "@radix-ui/themes";
-import {useState} from "react"
-import {CalendarIcon } from "@radix-ui/react-icons";
+import { Box, Card, Text, Heading, Button, Flex, TextField, TextArea, Callout } from "@radix-ui/themes";
+import { useState } from "react";
+import { CalendarIcon, InfoCircledIcon, CheckCircledIcon } from "@radix-ui/react-icons";
+import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 
 export default function DashboardSolicitudVacaciones(){
     //Hook para actualizar el formulario
@@ -10,39 +12,71 @@ export default function DashboardSolicitudVacaciones(){
     const[fechaFinal, setFechaFinal] = useState("");
     const[comentario, setComentario] = useState("");
     const[enviado, setEnviado] = useState(false); //por defecto no hemos pulsado el botón de envío de la solicitudç
-    const fechaActual = new Date().toISOString().split("T")[0]; 
+    const fechaActual = format(new Date(), "yyyy-MM-dd");
 
-    const envioFormulario = (e: React.SubmitEvent) =>{
+
+    //logica conexion BD
+    const router = useRouter();
+    const [mensaje, setMensaje] = useState<{ texto: string, tipo: "error" | "exito" } | null>(null);
+    
+    
+    const envioFormulario = async (e: React.SubmitEvent) =>{
         e.preventDefault(); //Eviar recarga automática de la pagina
+        setMensaje(null); //limpiamos el mensaje antes
 
         if(fechaActual > fechaInicio){
-            alert(`ERROR: \n -Fecha Inicio solicitada: ${fechaInicio} es anterior al dia de hoy ${fechaActual}`);
+            setMensaje({texto: `La fecha de inicio solicitada ${fechaInicio} no puede ser anterior al día de hoy ${fechaActual}`, tipo: "error"});
             return;
         }
-
         if(fechaActual > fechaFinal){
-            alert(`ERROR: \n -Fecha Final solicitada: ${fechaFinal} es anterior al dia de hoy ${fechaActual}`);
+            setMensaje({texto: `La fecha de fin ${fechaFinal} no puede ser anterior al día de hoy ${fechaActual}`, tipo: "error"});
             return;
         }
-
-        if(fechaFinal <= fechaInicio){
-            alert(`ERROR: \n -Fecha Final solicitada: ${fechaFinal} es anterior o igual a la fecha de inicio ${fechaInicio}`);
+        if(fechaInicio > fechaFinal){
+            setMensaje({texto: `La fecha de fin ${fechaFinal} no puede ser anterior a la fecha de inicio ${fechaInicio}`, tipo: "error"});
             return;
         }
 
         setEnviado(true);
 
-        setTimeout(() =>{
-            alert(
-                `Solicitud Enviada: \n -Fecha Inicio: ${fechaInicio}\n -Fecha Final: ${fechaFinal}\n -Comentarios Añadidos: ${comentario}`
-            );
+        try {
+            const usuarioGuardado:any = localStorage.getItem("usuarioLogueado");
+            if(!usuarioGuardado){
+                setMensaje({texto:"Sesion expirada. Es necesario que vuelva a loguearse", tipo:"error"});
+                router.push("/login");
+                return;
+            }
+
+            const usuario = JSON.parse(usuarioGuardado);
+            
+            const respuesta = await fetch("/api/solicitudes", {
+                method: "POST",
+                headers: {'Content-Type': "application/json"},
+                body: JSON.stringify({
+                    usuarioId: usuario._id,
+                    tipoDia: "Vacaciones",
+                    fechaInicio: fechaInicio,
+                    fechaFin: fechaFinal,
+                    comentario: comentario,
+                    estado: "Pendiente"
+                })
+            });
+
+            if(respuesta.ok){
+                setMensaje({ texto: "¡Vacaciones solicitadas con éxito! Ya puedes verlas en tu resumen.", tipo: "exito" });
+                setComentario("");
+                setFechaInicio("");
+                setFechaFinal("");
+            }
+            else {
+                setMensaje({ texto: "Hubo un error en el envío de la solicitud", tipo: "error" });
+            }
+        }catch (error){
+            setMensaje({texto: "Error en la conexión con el servidor", tipo:"error"});
+        }finally{
             setEnviado(false); //una vez enviado lo ponemos a false para permitir nuevos envios
-            //Limpiamos todos los datos
-            setComentario("");
-            setFechaInicio("");
-            setFechaFinal("")
-        }, 10);
-    };   
+        }
+    };
 
     return (
         //caja blanca del centro
@@ -55,6 +89,19 @@ export default function DashboardSolicitudVacaciones(){
             </Box>
             {/*Ahora añdimos el card que contendrá el formulario*/}
              <Card size="4" style={{maxWidth: "650px", padding: "35px", margin:"0 auto"}}>
+
+                {mensaje && (
+                    <Box mb="5">
+                        <Callout.Root color={mensaje.tipo === "error" ? "red" : "green"} variant="soft">
+                            <Callout.Icon>
+                                {mensaje.tipo === "error" ? <InfoCircledIcon /> : <CheckCircledIcon />}
+                            </Callout.Icon>
+                            <Callout.Text>
+                                {mensaje.texto}
+                            </Callout.Text>
+                        </Callout.Root>
+                    </Box>
+                )}
 
                 <form onSubmit={envioFormulario}>
                     {/*Ordenamos en vertical los elementos del formulario que lo alinearemos con el flex en vertical*/}

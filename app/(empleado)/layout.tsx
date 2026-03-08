@@ -1,12 +1,29 @@
+"use client";
+
 import { SidebarMenu } from "@/app/componentes/SidebarMenu"; // Importamos el componente
 import { Box, Flex, Heading, Text, Avatar } from "@radix-ui/themes";
+import { useState, useEffect } from "react";
 
 export default function EmpleadoLayout({ children }: { children: React.ReactNode }) {
-  const empleado = {
-    nombre: "Ana López",
-    puesto: "Enfermera",
-    icono: "AL"
-  };
+  
+  const [empleado, setEmpleado] = useState <{nombre: string, puesto:string, icono: string}>({nombre: "", puesto: "", icono: ""});
+
+  useEffect(() => {
+    const datosGuardados = localStorage.getItem("usuarioLogueado");
+
+    if(datosGuardados){
+      const datosUsuario = JSON.parse(datosGuardados);
+
+      const inicialNombre = datosUsuario.nombre.charAt(0).toUpperCase();
+      const inicialApellido = datosUsuario.apellido.charAt(0).toUpperCase();
+
+      setEmpleado({
+        nombre: `${datosUsuario.nombre} ${datosUsuario.apellido}`,
+        puesto: datosUsuario.rol,
+        icono: `${inicialNombre}${inicialApellido}`
+      });
+    }
+  }, []);
 
   return (
     <Flex style={{ height: "100vh", backgroundColor: "#F3F4F6" }}>
