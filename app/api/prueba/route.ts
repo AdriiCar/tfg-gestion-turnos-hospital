@@ -29,12 +29,85 @@ export async function GET() {
         });
 
         console.log("Creando usuarios...");
-        const juan = await Usuario.create({ nombre: "Juan", apellido: "Pérez", correo: "juan@hospital.com", password: "123", rol: "Enfermero", esSupervisor: false,  nivel: "Senior" });
-        const maria = await Usuario.create({ nombre: "María", apellido: "Gómez", correo: "maria@hospital.com", password: "123", rol: "Enfermero", esSupervisor: true, nivel: "Junior" });
-        const carlos = await Usuario.create({ nombre: "Carlos", apellido: "Ruiz", correo: "carlos@hospital.com", password: "123", rol: "Auxiliar", esSupervisor: false, nivel: "Senior" });
-        const ana = await Usuario.create({ nombre: "Ana", apellido: "López", correo: "ana@hospital.com", password: "123", rol: "Auxiliar", esSupervisor: true, nivel: "Senior" });
-        const laura = await Usuario.create({ nombre: "Laura", apellido: "Sustituta", correo: "laura@hospital.com", password: "123", rol: "Enfermero", esSupervisor: false, nivel: "Senior" });
+        const juan = await Usuario.create({
+            nombre: "Juan",
+            apellido: "Pérez",
+            correo: "juan@hospital.com",
+            password: "123",
+            rol: "Enfermero",
+            esSupervisor: false,
+            nivel: "Senior",
+            estadoActual: {
+                horasPrevistas: 1502,
+                horasRealizadas: 468,
+                balanceAnual: 10,
+                diasLibresRestantes: 1
+            }
+        });
 
+        const maria = await Usuario.create({
+            nombre: "María",
+            apellido: "Gómez",
+            correo: "maria@hospital.com",
+            password: "123",
+            rol: "Enfermero",
+            esSupervisor: true,
+            nivel: "Junior",
+            estadoActual: {
+                horasPrevistas: 1492,
+                horasRealizadas: 485,
+                balanceAnual: 0,
+                diasLibresRestantes: 3
+            }
+        });
+
+        const carlos = await Usuario.create({
+            nombre: "Carlos",
+            apellido: "Ruiz",
+            correo: "carlos@hospital.com",
+            password: "123",
+            rol: "Auxiliar",
+            esSupervisor: false,
+            nivel: "Senior",
+            estadoActual: {
+                horasPrevistas: 1505,
+                horasRealizadas: 491,
+                balanceAnual: 13,
+                diasLibresRestantes: 0
+            }
+        });
+
+        const ana = await Usuario.create({
+            nombre: "Ana",
+            apellido: "López",
+            correo: "ana@hospital.com",
+            password: "123",
+            rol: "Auxiliar",
+            esSupervisor: true,
+            nivel: "Senior",
+            estadoActual: {
+                horasPrevistas: 1478,
+                horasRealizadas: 455,
+                balanceAnual: -14,
+                diasLibresRestantes: 2
+            }
+        });
+
+        const laura = await Usuario.create({
+            nombre: "Laura",
+            apellido: "Sustituta",
+            correo: "laura@hospital.com",
+            password: "123",
+            rol: "Enfermero",
+            esSupervisor: false,
+            nivel: "Senior",
+            estadoActual: {
+                horasPrevistas: 1490,
+                horasRealizadas: 486,
+                balanceAnual: -2,
+                diasLibresRestantes: 5
+            }
+        });
        
         console.log("Creando plantillas...");
         await Plantilla.create([
