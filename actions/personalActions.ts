@@ -15,7 +15,7 @@ export interface DatosEmpleado {
     fechaFin?:  string;
 }
 
-export async function crearEmpleado(datos: DatosEmpleado){
+export async function crearEmpleadoAction(datos: DatosEmpleado){
     try{
         await conectarDB();
 
@@ -47,7 +47,7 @@ export async function crearEmpleado(datos: DatosEmpleado){
 }
 
 
-export async function modificarEmpleado(idUsuario: string, datos:DatosEmpleado){
+export async function modificarEmpleadoAction(idUsuario: string, datos:DatosEmpleado){
     try{
         await conectarDB();
 
@@ -69,7 +69,7 @@ export async function modificarEmpleado(idUsuario: string, datos:DatosEmpleado){
 }
 
 
-export async function eliminarEmpleado(idUsuario: string){
+export async function eliminarEmpleadoAction(idUsuario: string){
     try{
         await conectarDB();
 

@@ -2,7 +2,7 @@ import { obtenerSolicitudesAprobadasAction, obtenerPlantillaAction } from "@/act
 import DashboardCalendarioVisual from "./DashboardCalendarioCliente";
 import Usuario from "@/models/usuario";
 
-export default async function DashboardCalendario(){
+export default async function CalendarioPage(){
 
     const usuarioId = "69b09469989a266aefb3f134"
     const añoActual = new Date().getFullYear();

@@ -2,7 +2,7 @@ import { Box } from "@radix-ui/themes";
 import { conectarDB } from "@/lib/mongodb";
 import Usuario from "@/models/usuario";
 import DashboardPersonalVista from "./DashboardPersonalCliente";
-import { crearEmpleado, eliminarEmpleado, modificarEmpleado } from "@/actions/personalActions";
+import { crearEmpleadoAction, eliminarEmpleadoAction, modificarEmpleadoAction } from "@/actions/personalActions";
 
 interface DatosContractualesBD {
     horasContrato?: number;
@@ -27,7 +27,7 @@ interface UsuarioInterfaz {
     estadoActual?: EstadoActualBD;
 }
 
-export default async function DashboardPersonal() {
+export default async function PersonalPage() {
     await conectarDB();
     
     const usuarios = await Usuario.find({}).lean();
@@ -54,9 +54,9 @@ export default async function DashboardPersonal() {
     return (
         <DashboardPersonalVista 
             empleados={empleados}
-            crear={crearEmpleado}
-            modificar={modificarEmpleado}
-            borrar={eliminarEmpleado}
+            crear={crearEmpleadoAction}
+            modificar={modificarEmpleadoAction}
+            borrar={eliminarEmpleadoAction}
         />
     )
 } 

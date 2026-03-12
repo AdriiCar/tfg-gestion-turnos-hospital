@@ -111,10 +111,10 @@ export async function GET() {
        
         console.log("Creando plantillas...");
         await Plantilla.create([
-            { usuario: juan._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 4, turno: "M"}, {dia: 5, turno: "M"}, {dia: 6, turno: "M"}] }] },
-            { usuario: maria._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 4, turno: "N"}, {dia: 5, turno: "N"}, {dia: 6, turno: "N"}] }] },
-            { usuario: carlos._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 4, turno: "M"}, {dia: 5, turno: "M"}, {dia: 6, turno: "M"}] }] },
-            { usuario: ana._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 4, turno: "N"}, {dia: 5, turno: "N"}, {dia: 6, turno: "N"}] }] }
+            { usuario: juan._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 13, turno: "M"}, {dia: 14, turno: "M"}, {dia: 15, turno: "M"}] }] },
+            { usuario: maria._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 13, turno: "N"}, {dia: 14, turno: "N"}, {dia: 15, turno: "N"}] }] },
+            { usuario: carlos._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 13, turno: "M"}, {dia: 14, turno: "M"}, {dia: 15, turno: "M"}] }] },
+            { usuario: ana._id, año: 2026, meses: [{ mes: 3, dias: [{dia: 13, turno: "N"}, {dia: 14, turno: "N"}, {dia: 15, turno: "N"}] }] }
         ]);
 
        

@@ -2,12 +2,12 @@ import { Box, Heading, Text } from "@radix-ui/themes";
 import { conectarDB } from "@/lib/mongodb";
 import Usuario from "@/models/usuario";
 import DashboardSolicitudDiaVisual from "./DashboardSolicitarDiaCliente";
-import { crearSolicitud } from "@/actions/solicitarDiaActions";
+import { crearSolicitudAction } from "@/actions/solicitarDiaActions";
 
 
 
 
-export default async function DashboardSolicitarDia(){
+export default async function SolicitarDiaCliente(){
     await conectarDB();
 
     const usuarioId = "69b09469989a266aefb3f134"
@@ -16,7 +16,7 @@ export default async function DashboardSolicitarDia(){
     return (
         <DashboardSolicitudDiaVisual
             usuarioId={usuarioId}
-            guardar = {crearSolicitud}
+            guardar = {crearSolicitudAction}
         />
     )
 }

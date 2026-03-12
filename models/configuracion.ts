@@ -16,8 +16,6 @@ const ConfiguracionSchema = new Schema({
         }
     },
     patronesBase: [{
-        _id: false, //evitamos que mongo los cree y lo creamos desde el cliente
-        id: {type: String, require: true},
         nombre: { type: String, required: true },
         secuencia: { type: [String], required: true }
     }],

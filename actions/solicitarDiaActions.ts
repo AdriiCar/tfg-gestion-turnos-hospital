@@ -14,7 +14,7 @@ interface SolicitudCliente {
 }
 
 
-export async function crearSolicitud(datosSolicitud: SolicitudCliente){
+export async function crearSolicitudAction(datosSolicitud: SolicitudCliente){
     try{
         await conectarDB();
 

@@ -31,7 +31,7 @@ interface PersonalProps {
 }
 
 
-export default function DashboardPersonalVista({
+export default function DashboardPersonalCliente({
     empleados,
     crear,
     modificar,

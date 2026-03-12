@@ -21,7 +21,7 @@ interface SolicitudProps {
 }
 
 
-export default function DashboardSolicitudDiaVisual({
+export default function DashboardSolicitudDiaCliente({
     usuarioId,
     guardar
 }: SolicitudProps){

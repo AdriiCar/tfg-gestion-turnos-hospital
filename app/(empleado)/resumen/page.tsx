@@ -46,7 +46,7 @@ const calcularProximoTurno = (plantilla: any) => {
   };
 
 
-export default async function DashboardResumen() {
+export default async function ResumenPage() {
   await conectarDB();
 
   //mientras no tengo JWT

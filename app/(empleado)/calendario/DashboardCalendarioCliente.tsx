@@ -51,7 +51,7 @@ const configTurnos: Record<tipoTurnos, {label: string; color: colorBadge; colorF
 
 
 //recibo los datos del backend
-export default function DashboardCalendarioVisual({
+export default function DashboardCalendarioCliente({
     solicitudesAprobadas,
     plantilla
 }: {

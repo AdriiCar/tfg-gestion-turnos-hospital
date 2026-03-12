@@ -2,10 +2,10 @@ import { Box } from "@radix-ui/themes";
 import { conectarDB } from "@/lib/mongodb";
 import Usuario from "@/models/usuario";
 import DashboardSolicitudVacacionesVista from "./DashboardSolicitarVacacionesCliente";
-import { crearSolicitud } from "@/actions/solicitarDiaActions";
+import { crearSolicitudAction } from "@/actions/solicitarDiaActions";
 
 
-export default async function DashboardSolicitarVacaciones() {
+export default async function SolicitarVacacionesPage() {
     await conectarDB();
 
     const usuario = await Usuario.findOne({"_id": "69b09469989a266aefb3f134"}).lean();
@@ -18,7 +18,7 @@ export default async function DashboardSolicitarVacaciones() {
     return (
         <DashboardSolicitudVacacionesVista 
             usuarioId={usuarioId}
-            guardar = {crearSolicitud}
+            guardar = {crearSolicitudAction}
         />
 
     )

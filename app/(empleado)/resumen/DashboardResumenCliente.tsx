@@ -61,7 +61,7 @@ interface ResumenProps {
 }
 
 
-export default function DashboardResumenVisual({ 
+export default function DashboardResumenCliente({ 
     usuario, 
     listaSolicitudes, 
     proximoTurno, 

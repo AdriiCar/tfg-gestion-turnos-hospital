@@ -20,7 +20,7 @@ interface SolicitudVacacionesProps {
     guardar: (datos: DatosSolicitud) => Promise<{exito: boolean, mensaje: string}>; 
 }
 
-export default function DashboardSolicitudVacacionesVista({
+export default function DashboardSolicitudVacacionesCliente({
     usuarioId,
     guardar
 }: SolicitudVacacionesProps){
