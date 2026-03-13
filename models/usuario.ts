@@ -10,6 +10,8 @@ const UsuarioSchema = new Schema({
   nivel: { type: String, default: 'Junior' },
   esSupervisor: {type: Boolean, default: false},
   
+  plantaId: { type: Schema.Types.ObjectId, ref: 'Planta', default: null },
+
   datosContractuales: {
     fechaInicio: { type: Date, default: Date.now },
     fechaFin: { type: Date, default: null },

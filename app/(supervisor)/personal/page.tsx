@@ -1,8 +1,10 @@
-import { Box } from "@radix-ui/themes";
 import { conectarDB } from "@/lib/mongodb";
 import Usuario from "@/models/usuario";
 import DashboardPersonalVista from "./DashboardPersonalCliente";
 import { crearEmpleadoAction, eliminarEmpleadoAction, modificarEmpleadoAction } from "@/actions/personalActions";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { decrypt } from "@/lib/auth";
 
 interface DatosContractualesBD {
     horasContrato?: number;
@@ -28,9 +30,19 @@ interface UsuarioInterfaz {
 }
 
 export default async function PersonalPage() {
+
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth_token")?.value;
+    if(!token) redirect("/"); 
+
+    const sesion = await decrypt(token);
+    if(!sesion || !sesion.esSupervisor) redirect("/");
+ 
+
+
     await conectarDB();
     
-    const usuarios = await Usuario.find({}).lean();
+    const usuarios = await Usuario.find({plantaId: sesion.plantaId}).lean();
 
     const empleados = usuarios.map((empleado: UsuarioInterfaz) => ({
         id: empleado._id.toString(), 
