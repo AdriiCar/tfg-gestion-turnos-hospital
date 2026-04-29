@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import LoginCliente from "./LoginCliente";
-import { loginAction, registroAction } from "@/actions/loginActions";
+import { loginAction } from "@/actions/loginActions";
 import { decrypt } from "@/lib/auth";
 
 
@@ -25,7 +25,6 @@ export default async function LoginPage(){
   return (
     <LoginCliente
       hacerLogin={loginAction}
-      hacerRegistro={registroAction}
     />
   )
 }

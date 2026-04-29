@@ -6,7 +6,7 @@ const ConfiguracionSchema = new Schema({
         horasTurnoN: { type: Number, default: 10 }
     },
     coberturaPlanta: {
-        mañana: { 
+        turnoM: { 
             enfermeros: { type: Number, default: 3 }, 
             auxiliares: { type: Number, default: 2 } 
         },
@@ -19,6 +19,7 @@ const ConfiguracionSchema = new Schema({
         nombre: { type: String, required: true },
         secuencia: { type: [String], required: true }
     }],
+    plantaId: { type: Schema.Types.ObjectId, ref: 'Planta', required: true }
 }, { timestamps: true });
 
 const Configuracion = mongoose.models.Configuracion || mongoose.model('Configuracion', ConfiguracionSchema, 'configuracionAlgoritmo');

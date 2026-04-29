@@ -1,7 +1,7 @@
 "use client"
 
-import { CheckIcon, Cross1Icon, Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { Box, Heading, IconButton, Table, Text, Flex, Button, Card, Dialog, Grid, TextField, Separator, Callout } from "@radix-ui/themes";
+import { CheckIcon, Cross1Icon, MagnifyingGlassIcon, Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Box, Heading, IconButton, Table, Text, Flex, Button, Card, Dialog, Grid, TextField, Separator, Badge, SegmentedControl, Select, Switch } from "@radix-ui/themes";
 import { BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, ReferenceLine, Cell, Bar } from "recharts";
 import { toast } from "sonner";
 import { useState, useTransition } from "react";
@@ -14,17 +14,25 @@ interface Empleado{
     apellidos: string,
     correo:string,
     rol: string,
-    contrato: number,
+    horasContrato: number,
     previstas: number,
     balance: number,
     actuales: number,
     nivel: string,
     fechaInicio?: string,
-    fechaFin?: string
+    fechaFin?: string,
+    plantaId: string,
+    esSupervisor: boolean
+}
+
+interface Planta {
+    id: string;
+    nombre: string;
 }
 
 interface PersonalProps {
     empleados: Empleado[];
+    listaPlantas: Planta[],
     crear: (datos: DatosEmpleado) => Promise<{exito:boolean; mensaje: string}>;
     modificar: (idUsuario: string, datos: DatosEmpleado) => Promise<{exito:boolean; mensaje: string}>;
     borrar: (idUsuario: string) => Promise<{exito:boolean; mensaje: string}>;
@@ -33,6 +41,7 @@ interface PersonalProps {
 
 export default function DashboardPersonalCliente({
     empleados,
+    listaPlantas,
     crear,
     modificar,
     borrar
@@ -44,11 +53,11 @@ export default function DashboardPersonalCliente({
 
     const[dialogoUsuario, setDialogoUsuario] = useState<boolean>(false);
 
-    const[datosUsuario, setDatosUsuario] = useState({nombre: "", correo:"", rol: "Enfermero", fechaInicio: "", fechaFin: "", experiencia:"Senior"});
+    const[datosUsuario, setDatosUsuario] = useState({nombre: "", correo:"", rol: "Enfermero", fechaInicio: "", fechaFin: "", experiencia:"Senior", horasContrato: 0 as number | string, plantaId: "", esSupervisor: false});
 
     const abrirCrear =() =>{
         setIdEditado(null);
-        setDatosUsuario({nombre: "", correo:"", rol: "Enfermero", fechaInicio: "", fechaFin: "", experiencia:"Senior"});
+        setDatosUsuario({nombre: "", correo:"", rol: "Enfermero", fechaInicio: "", fechaFin: "", experiencia:"Senior", horasContrato: 0,  plantaId: "", esSupervisor: false});
         setDialogoUsuario(true);
     }
 
@@ -63,7 +72,10 @@ export default function DashboardPersonalCliente({
             rol: empleado.rol,
             fechaInicio: empleado.fechaInicio || "",
             fechaFin: empleado.fechaFin || "",
-            experiencia: empleado.nivel
+            experiencia: empleado.nivel,
+            horasContrato: empleado.horasContrato,
+            plantaId: empleado.plantaId,
+            esSupervisor: empleado.esSupervisor
         })
 
         setDialogoUsuario(true);
@@ -77,6 +89,7 @@ export default function DashboardPersonalCliente({
             return;
         }
 
+
         const nombreCompleto = datosUsuario.nombre.split(" ");
         const nombre = nombreCompleto[0];
         const apellido = nombreCompleto.slice(1).join(" ") || " ";
@@ -89,7 +102,10 @@ export default function DashboardPersonalCliente({
             rol: datosUsuario.rol,
             nivel: datosUsuario.experiencia,
             fechaInicio: datosUsuario.fechaInicio,
-            fechaFin: datosUsuario.fechaFin
+            fechaFin: datosUsuario.fechaFin,
+            horasContrato: Number(datosUsuario.horasContrato) || 1492,
+            plantaId: datosUsuario.plantaId,
+            esSupervisor: datosUsuario.esSupervisor
         }
 
         empezarTransicion(async () => {
@@ -143,11 +159,56 @@ export default function DashboardPersonalCliente({
             }
         });
     };
+
+
+    //logica de filtrado de la gráfica
+    const [busqueda, setBusqueda] = useState("");
+    const [filtroRol, setFiltroRol] = useState("Todos");
+
+    const empleadosFiltrados = empleados.filter(emp => {
+        const coincideNombre = (emp.nombre + " " + emp.apellidos).toLowerCase().includes(busqueda.toLowerCase());
+        const coincideRol = filtroRol === "Todos" || emp.rol === filtroRol;
+        return coincideNombre && coincideRol;
+    })
    
 
     return(
         <Box p="6">
             <Heading size="6" mb="5" style={{color: "#1F2937"}}>Gestión Personal</Heading>
+
+            
+            {/*Barra de búsqueda y filtros*/}
+            <Flex justify="between" align="end" mb="5" gap="4">
+                {/* Buscador de texto */}
+                <Box style={{flexGrow: 1, width: "400px" }}>
+                    <TextField.Root 
+                        placeholder="Buscar empleado por nombre..." 
+                        size="2" 
+                        variant="soft"
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                    >
+                        <TextField.Slot>
+                            <MagnifyingGlassIcon height="16" width="16" />
+                        </TextField.Slot>
+                    </TextField.Root>
+                </Box>
+
+                {/*selector de rol */}
+                <Flex direction="column" gap="1">
+                    <Text size="2" weight="bold" color="gray">Mostrar:</Text>
+                    <SegmentedControl.Root size="2" value={filtroRol} onValueChange={setFiltroRol}>
+                        <SegmentedControl.Item value="Todos">Todos</SegmentedControl.Item>
+                        <SegmentedControl.Item value="Enfermero">Enfermeros</SegmentedControl.Item>
+                        <SegmentedControl.Item value="Auxiliar">Auxiliares</SegmentedControl.Item>
+                    </SegmentedControl.Root>
+                </Flex>
+
+                <Button size="3" onClick={abrirCrear} disabled={estaPendiente} style={{ backgroundColor: "#64748B", cursor: "pointer", padding: "10px 20px" }}>
+                    <PlusIcon/> Añadir Usuario
+                </Button>
+            </Flex>
+
 
             {/*TABLA DE EMPLEADOS*/}
             <Table.Root variant="surface">
@@ -167,13 +228,17 @@ export default function DashboardPersonalCliente({
                 </Table.Header>
 
                 <Table.Body>
-                    {empleados.map((empleado) => (
+                    {empleadosFiltrados.map((empleado) => (
                         <Table.Row key={empleado.id} align="center">
                             <Table.Cell>{empleado.nombre}</Table.Cell>
                             <Table.Cell>{empleado.apellidos}</Table.Cell>
                             <Table.Cell>{empleado.correo}</Table.Cell>
-                            <Table.Cell>{empleado.rol}</Table.Cell>
-                            <Table.Cell>{empleado.contrato}</Table.Cell>
+                            <Table.Cell>
+                                <Badge color={empleado.rol === "Enfermero" ? "blue" : "cyan"} variant="soft" radius="full">
+                                    {empleado.rol}
+                                </Badge>
+                            </Table.Cell>
+                            <Table.Cell>{empleado.horasContrato}</Table.Cell>
                             <Table.Cell>{empleado.previstas}</Table.Cell>
                             <Table.Cell>
                                 <Text weight="bold" 
@@ -185,7 +250,11 @@ export default function DashboardPersonalCliente({
                                 </Text>
                             </Table.Cell>
                             <Table.Cell>{empleado.actuales}</Table.Cell>
-                            <Table.Cell>{empleado.nivel}</Table.Cell>
+                            <Table.Cell>
+                                <Badge color={empleado.nivel === "Senior" ? "gold" : "gray"} variant="outline">
+                                    {empleado.nivel}
+                                </Badge>
+                            </Table.Cell>
                             <Table.Cell>
                                 <Flex gap="2">
                                     <IconButton variant="ghost" color="gray" disabled={estaPendiente} onClick= {() => abrirEditar(empleado)} style={{cursor: "pointer"}}>
@@ -201,12 +270,6 @@ export default function DashboardPersonalCliente({
                 </Table.Body>
             </Table.Root>
 
-            {/*Boton de añadir usuario*/}
-            <Flex justify="center" py="5">
-                    <Button size="3" onClick={abrirCrear} disabled={estaPendiente} style={{ backgroundColor: "#64748B", cursor: "pointer", padding: "10px 20px" }}>
-                        <PlusIcon/> Añadir Usuario
-                    </Button>
-            </Flex>
 
             {/*GRÁFICA BALANCE DE HORAS*/}
             <Flex justify="center">
@@ -217,20 +280,20 @@ export default function DashboardPersonalCliente({
                         <ResponsiveContainer width="100%" height="100%" minWidth={10} minHeight={300}>
                             <BarChart
                                 layout="vertical"
-                                data={empleados}
+                                data={empleadosFiltrados}
                                 margin={{top: 5, right: 30, left: 20, bottom: 5}} 
                             >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
-                                <XAxis type="number" domain={['dataMin - 5', `dataMax + 5`]}/>
-                                <YAxis dataKey="nombre" type="category" width={80}/>
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="nombre" type="category" width={100} axisLine={false} tickLine={false} style={{ fontSize: '12px' }} />
                                 <Tooltip cursor={{fill:'transparent'}}/>
-                                <ReferenceLine x={0} stroke={"#000"}/>
+                                <ReferenceLine x={0} stroke="#475569" strokeWidth={2}/>
                                 
-                                <Bar dataKey="balance" fill="#8884d8" barSize={20}>
-                                    {empleados.map((persona, indice) => (
+                               <Bar dataKey="balance" radius={[0, 4, 4, 0]} barSize={18}>
+                                    {empleadosFiltrados.map((persona, indice) => (
                                         <Cell
                                             key={`cell-${indice}`}
-                                            fill={persona.balance >= 0 ? "#4ADE80" : "#F87171"}
+                                            fill={persona.balance >= 0 ? "#10B981" : "#EF4444"}
                                         />
 
                                     ))}
@@ -326,6 +389,7 @@ export default function DashboardPersonalCliente({
                                     onChange={(e) => setDatosUsuario({...datosUsuario, fechaFin: e.target.value})}
                                 />
 
+
                                      {/*Columna Izquierda*/}
                                 <Text size="2">Experiencia:</Text>
                                 {/*Columna Derecha*/}
@@ -345,6 +409,58 @@ export default function DashboardPersonalCliente({
                                         <Text size="2">Junior</Text>
                                     </Flex>
                                 </Flex>
+
+                                {/*Horas de contrato*/}
+                                <Text size="2">Horas Contrato Anual:</Text>
+                                <TextField.Root
+                                    variant="soft"
+                                    color="gray"
+                                    type="number"
+                                    placeholder="Ej: 1492"
+                                    value={datosUsuario.horasContrato}
+                                    onChange={(e) => setDatosUsuario({
+                                        ...datosUsuario, 
+                                        horasContrato: e.target.value === "" ? "" : Number(e.target.value)
+                                    })}
+                                />
+                            </Grid>
+                        </Box>
+
+                        {/*Seccion permisos y planta*/}
+                        <Box>
+                            <Text size="4" weight="bold" mb="3" as="div">Permisos y Ubicación</Text>
+                            <Grid columns="2" gap="4" align="center">
+                                
+                                {/* Interruptor de Supervisor */}
+                                <Text size="2">¿Es Supervisor?</Text>
+                                <Flex align="center" gap="2">
+                                    <Switch 
+                                        size="2" 
+                                        color="indigo"
+                                        checked={datosUsuario.esSupervisor} 
+                                        onCheckedChange={(checked) => setDatosUsuario({...datosUsuario, esSupervisor: checked})}
+                                    />
+                                    <Text size="2" color={datosUsuario.esSupervisor ? "indigo" : "gray"} weight={datosUsuario.esSupervisor ? "bold" : "regular"}>
+                                        {datosUsuario.esSupervisor ? "Sí (Tiene privilegios)" : "No (Empleado base)"}
+                                    </Text>
+                                </Flex>
+
+                                {/* Desplegable de Planta */}
+                                <Text size="2">Planta Asignada:</Text>
+                                <Select.Root 
+                                    value={datosUsuario.plantaId} 
+                                    onValueChange={(val) => setDatosUsuario({...datosUsuario, plantaId: val})}
+                                >
+                                    <Select.Trigger variant="soft" color="gray" placeholder="Seleccione una planta..." style={{ width: '100%' }} />
+                                    <Select.Content>
+                                        {/* Mapeamos la lista de plantas que nos mandó el servidor */}
+                                        {listaPlantas?.map((planta) => (
+                                            <Select.Item key={planta.id} value={planta.id}>
+                                                {planta.nombre}
+                                            </Select.Item>
+                                        ))}
+                                    </Select.Content>
+                                </Select.Root>
                             </Grid>
                         </Box>
                     </Flex>

@@ -1,30 +1,22 @@
-"use client";
+
 
 import { Box, Flex, Heading, Text, Avatar } from "@radix-ui/themes";
 import { SidebarMenuSupervisor } from "../componentes/SidebarMenuSupervisor";
-import { useEffect, useState } from "react";
+import BotonLogout from "@/app/componentes/BotonLogout";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/auth";
+import Link from "next/link";
 
-export default function EmpleadoLayout({ children }: { children: React.ReactNode }) {
+export default async function SupervisorLayout({ children }: { children: React.ReactNode }) {
   
-  const [supervisor, setSupervisor] = useState <{nombre: string, puesto:string, icono: string}>({nombre: "", puesto: "", icono: ""});
 
-  useEffect(() => {
-    const datosGuardados = localStorage.getItem("usuarioLogueado");
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+  
+  const sesion = token ? await decrypt(token) : null;
 
-    if(datosGuardados){
-      const datosUsuario = JSON.parse(datosGuardados);
-
-      const inicialNombre = datosUsuario.nombre.charAt(0).toUpperCase();
-      const inicialApellido = datosUsuario.apellido.charAt(0).toUpperCase();
-
-      setSupervisor({
-        nombre: `${datosUsuario.nombre} ${datosUsuario.apellido}`,
-        puesto: datosUsuario.rol,
-        icono: `${inicialNombre}${inicialApellido}`
-      });
-    }
-  }, []);
-
+  const iniciales = sesion ? `${(sesion.nombre as string).charAt(0)}${(sesion.apellido as string || "").charAt(0)}`.toUpperCase()
+    : "??";
 
   return (
     <Flex style={{ height: "100vh", backgroundColor: "#F3F4F6" }}>
@@ -34,7 +26,7 @@ export default function EmpleadoLayout({ children }: { children: React.ReactNode
           width: "250px", 
           backgroundColor: "white", 
           borderRight: "1px solid #E5E7EB", 
-          padding: "20px" 
+          padding: "20px",
         }}
       >
         <Heading size="4" mb="5" color="blue">Gestor de turnos</Heading>
@@ -43,20 +35,37 @@ export default function EmpleadoLayout({ children }: { children: React.ReactNode
            <SidebarMenuSupervisor /> 
         </Box>
 
-        <Flex align="center" gap="3" mt="auto" style={{ paddingTop: "20px", borderTop: "1px solid #eee" }}>
-            <Avatar fallback={supervisor.icono} size="3" radius="full" color="blue" variant="soft"/>
-            <Box>
-                <Text as="div" size="2" weight="bold">{supervisor.nombre}</Text>
-                <Text as="div" size="1" color="gray">{supervisor.puesto}</Text>
-            </Box>
+        <Flex direction="column" gap="4" mt="auto" style={{ paddingTop: "20px", borderTop: "1px solid #eee" }}>
+            <Link href="/perfil_supervisor" style={{textDecoration: "none", color: "inherit"}}>
+                <Flex align="center" gap="3" className="hover:bg-gray-100 transition-colors"
+                 style={{ 
+                        padding: "8px", 
+                        borderRadius: "8px", 
+                        cursor: "pointer" 
+                    }}>
+                  <Avatar fallback={iniciales} size="3" radius="full" color="blue" variant="soft"/>
+                  <Box>
+                      <Text as="div" size="2" weight="bold">
+                          {sesion ? `${sesion.nombre} ${sesion.apellido || ""}` : "Cargando..."}
+                      </Text>
+                      <Text as="div" size="1" color="gray">
+                          {sesion ? (sesion.rol as string) : "Supervisor"}
+                      </Text>
+                  </Box>
+             </Flex>
+            </Link>
+
+            {/* botón de cierre de sesión */}
+            <BotonLogout/>
+            
         </Flex>
 
-      </Box>
+      </Box> 
 
       <Box style={{ flex: 1, overflowY: "auto" }}>
         {children}
       </Box>
-
+      
     </Flex>
   );
 }

@@ -4,18 +4,26 @@ import { usePathname } from "next/navigation";
 import { Flex, Button, Text } from "@radix-ui/themes";
 import Link from "next/link";
 import { 
-  CalendarIcon,   // Para Planificador
+  TableIcon,   // Para Planificador
   UpdateIcon,     // Para Rotación 
   ClipboardIcon,  // Para Gestor Solicitudes
-  PersonIcon      // Para Personal
+  PersonIcon,      // Para Personal
+  HomeIcon,         //Para Resumen
+  CalendarIcon,     //Para Calenadrio
+  SunIcon,          //Para Solicitar Dia
+  PaperPlaneIcon    //Para Solicitar Vacaciones
 } from "@radix-ui/react-icons";
 
 // Definimos las rutas exactas del Supervisor según la imagen
 const menuItems = [
-  { label: "Planificador", href: "/planificador", icon: <CalendarIcon width="18" height="18" /> },
+  { label: "Planificador", href: "/planificador", icon: <TableIcon width="18" height="18" /> },
   { label: "Rotación Horario", href: "/rotacion", icon: <UpdateIcon width="18" height="18" /> },
   { label: "Gestor Solicitudes", href: "/solicitudes", icon: <ClipboardIcon width="18" height="18" /> },
   { label: "Personal", href: "/personal", icon: <PersonIcon width="18" height="18" /> },
+  { label: "Mi Resumen", href: "/resumenSupervisor", icon: <HomeIcon /> },
+  { label: "Mi Calendario", href: "/calendarioSupervisor", icon: <CalendarIcon /> },
+  { label: "Solicitar Día", href: "/solicitarDiaSupervisor", icon: <SunIcon /> },
+  { label: "Solicitar Vacaciones", href: "/solicitarVacacionesSupervisor", icon: <PaperPlaneIcon /> },
 ];
 
 export function SidebarMenuSupervisor() {

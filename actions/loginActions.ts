@@ -24,6 +24,7 @@ export async function loginAction(correo: string, password: string){
         const token = await new SignJWT({
             usuarioId: usuario._id.toString(),
             nombre: usuario.nombre,
+            apellido: usuario.apellido,
             rol: usuario.rol,
             esSupervisor: usuario.esSupervisor,
             plantaId: usuario.plantaId ? usuario.plantaId.toString() : null
@@ -46,33 +47,5 @@ export async function loginAction(correo: string, password: string){
     }catch(error){
         console.log(error);
         return {exito: false, mensaje: "Error en el servidor al intentar iniciar sesión"};
-    }
-}
-
-
-
-export async function registroAction(datos: { nombre: string, apellido: string, correo: string, password: string }){
-    try{
-        await conectarDB();
-
-        const existeUsuario = await Usuario.findOne({correo: datos.correo});
-
-        if(existeUsuario){
-            return {exito: false, mensaje: "Ya hay una cuenta vinculada a ese correo"};
-        }
-
-        const sal = await bcrypt.genSalt(); //por defecto son 10 rondas
-        const passwordCifrada = await bcrypt.hash(datos.password, sal);
-
-        await Usuario.create({
-            nombre: datos.nombre,
-            apellido: datos.apellido,
-            correo: datos.correo,
-            password: passwordCifrada
-        });
-
-        return {exito: true, mensaje: "¡Usuario registrado con éxito! Inicia sesión para acceder"};
-    }catch(error){
-        return {exito: false, mensaje: "Error en el servidor al crear el usuario"};
     }
 }

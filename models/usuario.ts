@@ -20,12 +20,16 @@ const UsuarioSchema = new Schema({
   },
   
   estadoActual: {
-    horasRealizadas: { type: Number, default: 0 },
+    //horasRealizadas: { type: Number, default: 0 },
     balanceAnual: { type: Number, default: 0 },
     horasPrevistas: { type: Number, default: 0 },
     diasLibresRestantes: { type: Number, default: 6 } 
-  }
+  },
+  esNuevoUsuario: { type: Boolean, default: true } //para saber si debe de cambiar la contraseña
+
 });
+
+UsuarioSchema.index({ plantaId: 1 });
 
 const Usuario = mongoose.models.Usuario || mongoose.model('Usuario', UsuarioSchema, "usuarios");
 

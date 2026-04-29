@@ -2,7 +2,7 @@ import mongoose, {Schema} from "mongoose";
 
 const PlantillaSchema = new Schema({
   usuario: { type: Schema.Types.ObjectId, ref: "Usuario", required: true },
-    año: { type: Number, required: true },
+    year: { type: Number, required: true },
     meses: [{
         mes: { type: Number, required: true },
         dias: [{
@@ -11,6 +11,9 @@ const PlantillaSchema = new Schema({
         }]
     }]
 }, { timestamps: true });
+
+
+PlantillaSchema.index({ usuario: 1, year: 1 }, { unique: true }); 
 
 
 const Plantilla = mongoose.models.Plantilla || mongoose.model("Plantilla", PlantillaSchema, "plantillas");

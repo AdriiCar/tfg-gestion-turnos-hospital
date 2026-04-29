@@ -2,7 +2,7 @@ import mongoose,{Schema} from "mongoose";
 
 const PlantaSchema = new Schema({
     nombre: {type:String, required: true},
-    piso: {type:Number}
+    descripcion: { type: String }
 });
 
 

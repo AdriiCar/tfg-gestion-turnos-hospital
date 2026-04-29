@@ -1,34 +1,43 @@
 "use client";
 
-import { Box, Flex, Heading, Text, Card, Button, Table, Badge, Dialog, RadioGroup, TextField, Switch, Grid, Separator, Checkbox, Slider, Callout } from "@radix-ui/themes";
-import { CaretDownIcon, CheckCircledIcon, ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import { Box, Flex, Heading, Text, Card, Button, Table, Badge, Dialog, RadioGroup, TextField, Grid, Select } from "@radix-ui/themes";
+import { CalendarIcon, ExclamationTriangleIcon, InfoCircledIcon, ChevronLeftIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import {useState, useTransition} from "react";
 import { BackpackIcon, MoonIcon, SunIcon } from "lucide-react";
-import { format, startOfDay, startOfWeek, addDays } from "date-fns";
+import { format, startOfDay, startOfWeek, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 //INTERFACES
 interface Empleado {
     id: string;
     nombre: string;
     turnos: string[];
+    rol: string;
 }
 
 interface Inconsistencia {
     id: string;
-    fecha: string;
+    fechaInicio: string;
+    fechaFin: string;
     turno: string;
     rolAfectado: string;
     tipoIncidencia: string;
     mensaje: string;
+    solicitudRelacionada? : string | null;
+    tipoCausa?: string;
+    nombreCausante? :string;
 }
 
 interface Sustituto {
     id: string;
-    fecha: string;
+    fechaInicio: string;
+    fechaFin: string;
     turno: string;
     sustituido: string;
+    sustituidoNombre: string; 
+    sustituidoCorreo: string;
     sustitutoNombre: string;
     sustitutoCorreo: string;
 }
@@ -45,8 +54,10 @@ interface PlanificadorProps {
     plantilla: Empleado[];
     listaInconsistencias: Inconsistencia[];
     listaSustitutos: Sustituto[];
-    modificarTurno: (usuario_id: string, indiceDia: number, nuevoTurno: string) => Promise<{exito: boolean, mensaje: string}>;
+    modificarTurno: (usuario_id: string, fecha: string, nuevoTurno: string) => Promise<{exito: boolean, mensaje: string}>;
     registrarSustituto: (datos: any) => Promise<{exito: boolean, mensaje: string}>;
+    registrarBajaMedica: (usuarioId: string, fechaInicio: string, fechaFin: string) => Promise<{exito: boolean, mensaje: string}>; 
+    fechaBase: string;
 }
 
 export default function DashboardPlanificador({
@@ -54,7 +65,9 @@ export default function DashboardPlanificador({
     listaInconsistencias,
     listaSustitutos,
     modificarTurno,
-    registrarSustituto
+    registrarSustituto,
+    registrarBajaMedica,
+    fechaBase
 }: PlanificadorProps){
 
 
@@ -63,8 +76,8 @@ export default function DashboardPlanificador({
     //LOGICA DE FECHAS
 
     const obtenerFechasSemanaActual = () => {
-        const hoy = new Date();
-        const lunes = startOfWeek(hoy, { weekStartsOn: 1 });
+        const fechaInicial = fechaBase ? new Date(fechaBase) : new Date();
+        const lunes = startOfWeek(fechaInicial, { weekStartsOn: 1 });
         const domingo = addDays(lunes, 6); //seis dias mas da al domingo
         
         const diasSemana = []
@@ -86,6 +99,27 @@ export default function DashboardPlanificador({
  
     const { diasSemana: diaSemana, textoSemana: semanaMes } = obtenerFechasSemanaActual();
 
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const cambiarSemana = (dias: number) => {
+        // Calculamos la nueva fecha
+        const actual = fechaBase ? new Date(fechaBase) : new Date();
+        const nuevaFecha = dias > 0 ? addDays(actual, dias) : subDays(actual, Math.abs(dias));
+        
+        // Copiamos los parámetros que ya tuviera la URL 
+        const params = new URLSearchParams(searchParams.toString());
+        
+        // Modificamos solo la fecha
+        params.set("fecha", format(nuevaFecha, 'yyyy-MM-dd'));
+        
+        // Hacemos el push a la ruta actual + los nuevos parámetros
+        router.push(`${pathname}?${params.toString()}`);
+    }
+
+    const irSemanaAnterior = () => cambiarSemana(-7);
+    const irSemanaSiguiente = () => cambiarSemana(7);
 
 
 //LOGICA DE CAMBIO DE TURNOS Y BAJAS
@@ -114,9 +148,13 @@ export default function DashboardPlanificador({
             return;
         } 
 
+        const base = fechaBase ? new Date(fechaBase) : new Date();
+        const lunes = startOfWeek(base, { weekStartsOn: 1 });
+        const fechaReal = addDays(lunes, seleccion.indiceDia);
+
         empezarTransicion(async () => {
             try{
-                const resultado = await modificarTurno(seleccion.id, seleccion.indiceDia, turnoNuevo);
+                const resultado = await modificarTurno(seleccion.id, fechaReal.toISOString(), turnoNuevo);
                 if(resultado.exito){
                     toast.success(resultado.mensaje);
                     setOpenDialog(false); 
@@ -131,29 +169,35 @@ export default function DashboardPlanificador({
     };
 
         
+    //LOGICA DE BAJAS MEDICAS
+    const [dialogoBaja, setDialogoBaja] = useState<boolean>(false);
+    const [datosBaja, setDatosBaja] = useState({usuarioId: "", fechaInicio: "", fechaFin: ""});
 
-    const registrarBaja = async() => {
-        if(!seleccion){
-            toast.error("Seleccione un usuario al que registrar la baja");
+    const confirmarRegistrarBaja = async () => {
+        if(!datosBaja.usuarioId || !datosBaja.fechaInicio || !datosBaja.fechaFin){
+            toast.error("Por favor, rellena todos los campos de la baja.");
             return;
         }
-        
+
+        if(datosBaja.fechaInicio > datosBaja.fechaFin){
+            toast.error("La fecha de inicio no puede ser posterior a la fecha de fin.");
+            return;
+        }
+
         empezarTransicion(async () => {
-            try{
-                const resultado = await modificarTurno(seleccion.id, seleccion.indiceDia, "BAJA");
+            try {
+                const resultado = await registrarBajaMedica(datosBaja.usuarioId, datosBaja.fechaInicio, datosBaja.fechaFin);
                 if(resultado.exito){
                     toast.success(resultado.mensaje);
-                    setOpenDialog(false); 
-                }
-                else {
+                    setDialogoBaja(false);
+                    setDatosBaja({usuarioId: "", fechaInicio: "", fechaFin: ""}); // Limpiar formulario
+                } else {
                     toast.error(resultado.mensaje);
                 }
-            }catch(error){
-                toast.error("Error al conectar con el servidor para cambiar el turno");
+            } catch(error) {
+                toast.error("Error al registrar la baja");
             }
         });
-
-        
     }
 
 
@@ -162,7 +206,7 @@ export default function DashboardPlanificador({
     //inconsistencia actual fundamental para saber cual hay que elimiar
     const[inconsistenciaActual, setInconsistenciaActual] = useState<Inconsistencia| null>(null);
     //guardamos los datos del sustituto
-    const[datosSustituto, setDatosSustituto] = useState<{nombre:string, correo:string}>({nombre:"", correo:""});
+    const[datosSustituto, setDatosSustituto] = useState<{nombre:string, correo:string, fechaInicio:string, fechaFin:string, nivel:string}>({nombre:"", correo:"", fechaInicio:"", fechaFin:"", nivel: ""});
     
    
     //el dialogo inicialmente esta cerrado hasta que no se pulse seleccionar sustituto on se pone a true
@@ -170,27 +214,44 @@ export default function DashboardPlanificador({
 
 
     const abrirFormularioSustituciones = (inconsistencia:Inconsistencia) => {
-        setDatosSustituto({nombre:"" , correo:""}); //reseteamos los datos del sustituto
-        setInconsistenciaActual(inconsistencia); //guardamos la inconsistencia
+        const inicioStr = format(new Date(inconsistencia.fechaInicio), 'yyyy-MM-dd');
+        const finStr = format(new Date(inconsistencia.fechaFin), 'yyyy-MM-dd');
+        
+        setDatosSustituto({nombre:"", correo:"", fechaInicio: inicioStr, fechaFin: finStr, nivel: "Junior"}); 
+        setInconsistenciaActual(inconsistencia); 
         setOpenSustitutoDialog(true);
 
     }
 
     const registroSustituto = async() => {
-        if(!datosSustituto.nombre || !datosSustituto.correo){
+        if(!datosSustituto.nombre || !datosSustituto.correo || !datosSustituto.fechaInicio || !datosSustituto.fechaFin){
             toast.error("Introduce todos los datos del sustituto");
             return;
         }
-
         if(inconsistenciaActual){
+            const inicioIncidencia = format(new Date(inconsistenciaActual.fechaInicio), 'yyyy-MM-dd');
+            const finIncidencia = format(new Date(inconsistenciaActual.fechaFin), 'yyyy-MM-dd');
+
+            if(datosSustituto.fechaFin < datosSustituto.fechaInicio){
+                toast.error("La fecha de inicio no puede ser posterior a la de fin.");
+                return;
+            }
+
+            if (datosSustituto.fechaInicio < inicioIncidencia || datosSustituto.fechaFin > finIncidencia) {
+                toast.error(`Las fechas deben estar dentro del rango de la incidencia (${format(new Date(inicioIncidencia), "dd/MM")} al ${format(new Date(finIncidencia), "dd/MM")}).`);
+                return;
+            }
+
             empezarTransicion(async () => {
                 try {
                     const resultado = await registrarSustituto({
-                        fecha: inconsistenciaActual.fecha,
+                        fechaInicio: datosSustituto.fechaInicio,
+                        fechaFin: datosSustituto.fechaFin,
                         turno: inconsistenciaActual.turno,
                         sustituido: inconsistenciaActual.rolAfectado,
                         sustitutoNombre: datosSustituto.nombre,
                         sustitutoCorreo: datosSustituto.correo,
+                        nivel: datosSustituto.nivel,
                         incidenciaId: inconsistenciaActual.id
                     });
                     
@@ -208,6 +269,11 @@ export default function DashboardPlanificador({
     }
 
 
+    //FILTRO POR ROL
+    const  [filtroRol, setFiltroRol] = useState<string>("Todos");
+
+    const plantillaFiltrada = plantilla.filter(usuario => filtroRol==="Todos" || usuario.rol === filtroRol);
+
   
     return(
         //Contenedor de la vista
@@ -223,7 +289,22 @@ export default function DashboardPlanificador({
                     {/**Cabecera calendario */}
                     <Flex justify="between" align="center" mb="5">
                         <Heading size="4" weight="bold">Plantilla de Personal</Heading>
-                        <Text size="3" weight="bold">{semanaMes}</Text>
+                        <Flex gap="4" align="center" justify="center">
+                            {/* Botones de navegación izquierda*/}
+                            <Button variant="ghost" onClick={irSemanaAnterior} style={{cursor: "pointer"}}>
+                                <ChevronLeftIcon width="20" height="20" />
+                            </Button>
+                            <Text size="3" weight="bold">{semanaMes}</Text>
+                            {/* Botones de navegación derecha*/}
+                            <Button variant="ghost" onClick={irSemanaSiguiente} style={{cursor: "pointer"}}>
+                                <ChevronRightIcon width="20" height="20" />
+                            </Button>
+                        </Flex>
+                        <Flex justify="end">
+                            <Button color="red" variant="soft" style={{cursor: "pointer", fontWeight: "bold"}} onClick={() => setDialogoBaja(true)}>
+                                + Registrar Baja
+                            </Button>
+                        </Flex>
                     </Flex>
 
                     <Table.Root variant="surface">
@@ -238,8 +319,8 @@ export default function DashboardPlanificador({
 
                         <Table.Body>
                             {/* Solo mapeamos si plantilla es realmente un Array */}
-                            {Array.isArray(plantilla) && plantilla.length > 0 ? (
-                                plantilla.map((empleado) => (
+                            {plantillaFiltrada.length > 0 ? (
+                                plantillaFiltrada.map((empleado) => (
                                     <Table.Row key={empleado.id}>
                                         <Table.RowHeaderCell>{empleado.nombre}</Table.RowHeaderCell>
                                         {empleado.turnos.map((turno, index) => (
@@ -268,63 +349,116 @@ export default function DashboardPlanificador({
                             )}
                         </Table.Body>
                     </Table.Root>
-                    <Flex justify="end" mt="4">
-                        <Button variant="soft" color="gray" style={{ cursor: 'pointer', color: "#374151" }}>
-                            Mostrar: [Todos] <CaretDownIcon/> {/*Me falta poner la funcionalidad*/}
-                        </Button>
+                    {/*Desplegable de rol*/}
+                    <Flex justify="end" mt="4" align="center" gap="3">
+                        <Text size="2" weight="bold" color="gray">Mostrar:</Text>
+                        <Select.Root value={filtroRol} onValueChange={setFiltroRol}>
+                            <Select.Trigger variant="soft" color="gray" style={{ cursor: 'pointer', width: '150px' }} />
+                            <Select.Content>
+                                <Select.Item value="Todos">Todos</Select.Item>
+                                <Select.Item value="Enfermero">Solo Enfermeros</Select.Item>
+                                <Select.Item value="Auxiliar">Solo Auxiliares</Select.Item>
+                            </Select.Content>
+                        </Select.Root>
                     </Flex>
                 </Card>
 
                 {/*Panel de Inconsistencias*/}
                 <Card size="4" style={{padding: "25px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)"}}>
-                    <Flex justify="between" align="center" mb="4">
-                        <Heading size="4" weight="bold">Panel de Inconsistencias</Heading>
-                        {/*Numero de errores*/}
-                        {listaInconsistencias.length > 0 && (
-                            <Badge color="red" variant="solid" radius="full">{listaInconsistencias.length}</Badge> 
-                        )}
-                    </Flex>
-
                     <Flex direction="column" gap="3">
                         {listaInconsistencias.length > 0 ? (
-                            listaInconsistencias.map((inconsistencia) => (
-                               //Un box por cada inconsistencia 
-                                <Box 
-                                    key={inconsistencia.id}
-                                    p="3"
-                                    style={{ 
-                                        backgroundColor: "#FCA5A5", 
-                                        borderRadius: "6px",
-                                        borderLeft: "5px solid #DC2626" 
-                                    }}
-                                >
-                                    <Flex justify="between" align="center" wrap="wrap" gap="3">
-                                        {/*Texto y el icono*/}
-                                        <Flex align="center" gap="2">
-                                            <ExclamationTriangleIcon color="#7F1D1D" /> 
-                                            <Text weight="bold" style={{ color: "#7F1D1D" }}>
-                                                {inconsistencia.mensaje}
-                                            </Text>
+                            listaInconsistencias.map((inconsistencia) => {
+                                // Sacamos de dónde viene el problema para pintarlo de un color u otro
+                                const esBaja = inconsistencia.tipoCausa === "Baja";
+                                const esVacaciones = inconsistencia.tipoCausa === "Vacaciones" || inconsistencia.tipoCausa?.includes("Permiso");
+                                const esHueco = inconsistencia.tipoCausa === "Hueco Estructural";
+
+                                // Valores por defecto (Rojo para cambios manuales)
+                                let bgColor = "#FEE2E2"; 
+                                let borderColor = "#DC2626"; 
+                                let badgeColor: "red" | "orange" | "violet" | "blue" = "red";
+                                let tituloBadge = "Turno Descubierto";
+                                let IconoUsar = ExclamationTriangleIcon; 
+                                let textoColorInfo = "#7F1D1D";
+
+                                // Cambiamos el estilo si el hueco lo ha provocado una solicitud aprobada
+                                if (esBaja) {
+                                    bgColor = "#F3E8FF"; // rosa para baja
+                                    borderColor = "#9333EA"; 
+                                    badgeColor = "violet";
+                                    tituloBadge = `Baja Médica: ${inconsistencia.nombreCausante}`;
+                                    IconoUsar = InfoCircledIcon; 
+                                    textoColorInfo = "#581C87";
+                                } else if (esVacaciones) {
+                                    bgColor = "#FEF3C7"; // naranja para vacaciones
+                                    borderColor = "#D97706";
+                                    badgeColor = "orange";
+                                    tituloBadge = `Vacaciones: ${inconsistencia.nombreCausante}`;
+                                    IconoUsar = CalendarIcon;
+                                    textoColorInfo = "#92400E";
+                                }else if (esHueco){
+                                    bgColor = "#DBEAFE"; // azul para huecos estructurales
+                                    borderColor = "#2563EB";
+                                    badgeColor = "blue";
+                                    tituloBadge = `Vacante (Hueco): ${inconsistencia.nombreCausante}`;
+                                    IconoUsar = InfoCircledIcon; 
+                                    textoColorInfo = "#1E3A8A";
+                                }
+
+                                return (
+                                    <Box 
+                                        key={inconsistencia.id}
+                                        p="4"
+                                        style={{ 
+                                            backgroundColor: bgColor, 
+                                            borderRadius: "8px",
+                                            borderLeft: `6px solid ${borderColor}`,
+                                            boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+                                            transition: "all 0.2s ease-in-out" 
+                                        }}
+                                    >
+                                        <Flex justify="between" align="center" wrap="wrap" gap="3">
+                                            
+                                            {/* Bloque izquierdo: Etiqueta visual, fechas y el texto del error */}
+                                            <Flex direction="column" gap="2">
+                                                {/* Cartelito para saber el motivo por qué falta gente */}
+                                                <Badge color={badgeColor} variant="solid" size="2" style={{width: 'fit-content'}}>
+                                                    <Flex align="center" gap="1">
+                                                        <IconoUsar width="14" height="14" />
+                                                        {tituloBadge}
+                                                    </Flex>
+                                                </Badge>
+                                                
+                                                <Text size="3" weight="bold" style={{ color: "#1F2937" }}>
+                                                    [{format(new Date(inconsistencia.fechaInicio), "dd/MM")} al {format(new Date(inconsistencia.fechaFin), "dd/MM")}]
+                                                </Text>
+                                                
+                                                <Text size="2" color="gray" style={{color: textoColorInfo, maxWidth: "500px"}}>
+                                                    {inconsistencia.mensaje}
+                                                </Text>
+                                            </Flex>
+                                            
+                                            {/* Botón para abrir el modal y asignar al sustituto */}
+                                            <Button 
+                                                size="3" 
+                                                style={{ 
+                                                    backgroundColor: borderColor, // mismo color que el borde
+                                                    color: "#FFF",
+                                                    cursor: "pointer",
+                                                    fontWeight: "bold"
+                                                }}
+                                                onClick={() => abrirFormularioSustituciones(inconsistencia)}
+                                            >
+                                                Buscar Sustituto
+                                            </Button>
+
                                         </Flex>
-                                        {/*Boton que permite registrar a un sustituto*/}
-                                        <Button 
-                                            size="2" 
-                                            style={{ 
-                                                backgroundColor: "#FCD34D", 
-                                                color: "#000",
-                                                cursor: "pointer",
-                                                fontWeight: "bold"
-                                            }}
-                                            onClick={() => abrirFormularioSustituciones(inconsistencia)}
-                                        >
-                                            Registrar Sustituto
-                                        </Button>
-                                    </Flex>
-                                </Box>
-                            ))
+                                    </Box>
+                                );
+                            })
 
                         ) : (
-                            <Text color="gray"> No se detectaron inconsistencias </Text>
+                            <Text color="gray"> Todo el cuadrante está cubierto. No hay incidencias. </Text>
                         )}
                     </Flex>
                 </Card>
@@ -346,10 +480,26 @@ export default function DashboardPlanificador({
                             <Table.Body>
                                 {listaSustitutos.map((sustituto) => (
                                     <Table.Row key={sustituto.id}>
-                                        <Table.RowHeaderCell>{format(startOfDay(new Date(sustituto.fecha)) , "dd/MM/yyyy")}</Table.RowHeaderCell>
+                                        <Table.RowHeaderCell>
+                                            {format(startOfDay(new Date(sustituto.fechaInicio)), "dd/MM")} - {format(startOfDay(new Date(sustituto.fechaFin)), "dd/MM")}
+                                        </Table.RowHeaderCell>
                                         <Table.Cell>{sustituto.turno}</Table.Cell>
-                                        <Table.Cell style={{color: "#DC2626"}}>{sustituto.sustituido}</Table.Cell>
-                                        <Table.Cell style={{color:"#16A34A"}}>{sustituto.sustitutoNombre}</Table.Cell>
+                                        <Table.Cell style={{color: "#DC2626"}}>
+                                            <Flex direction="column">
+                                                <Text>{sustituto.sustituidoNombre || sustituto.sustituido}</Text>
+                                                {sustituto.sustituidoCorreo && (
+                                                    <Text size="1" color="gray">{sustituto.sustituidoCorreo}</Text>
+                                                )}
+                                            </Flex>
+                                        </Table.Cell>
+                                        <Table.Cell style={{color: "#16A34A"}}>
+                                            <Flex direction="column">
+                                                <Text>{sustituto.sustitutoNombre}</Text>
+                                                {sustituto.sustitutoCorreo && (
+                                                    <Text size="1" color="gray">{sustituto.sustitutoCorreo}</Text>
+                                                )}
+                                            </Flex>
+                                        </Table.Cell>
                                     </Table.Row>
                                 ))}
                             </Table.Body>
@@ -402,12 +552,7 @@ export default function DashboardPlanificador({
                         </RadioGroup.Root>
                     
                     {/*Botones de asignar una baja, guardar o cancelar*/}
-                    <Flex justify="between" align="center" mt="6">
-                        {/*Boton de baja*/}
-                         <Button onClick={registrarBaja} disabled={estaPendiente} color="red" style={{cursor:"pointer"}}>
-                            Registrar ausencia/baja
-                         </Button>
-
+                    <Flex justify="between" mt="6">
                          {/*Botones de cancelar y guardar*/}
                          <Flex gap="3">
                             {/*Boton de cerrar*/}
@@ -471,7 +616,56 @@ export default function DashboardPlanificador({
                                 //si se escribe queremos que actualice el campo de nombre y el email lo mantenga con una copia
                                 onChange={(e) => setDatosSustituto({...datosSustituto, correo: e.target.value})}
                             />
+                        </Flex>
+                        {/* Selector de Nivel de Experiencia */}
+                        <Flex align="center" gap="3">
+                            <Text size="2" style={{width:"140px"}}>
+                                Nivel Experiencia:
+                            </Text>
+                            <Box style={{flex: 1}}>
+                                <Select.Root 
+                                    value={datosSustituto.nivel} 
+                                    onValueChange={(valor) => setDatosSustituto({...datosSustituto, nivel: valor})}
+                                >
+                                    <Select.Trigger variant="soft" color="gray" style={{ width: '100%', cursor: 'pointer' }} />
+                                    <Select.Content>
+                                        <Select.Item value="Junior">Junior (Sin experiencia requerida)</Select.Item>
+                                        <Select.Item value="Senior">Senior (Alta experiencia)</Select.Item>
+                                    </Select.Content>
+                                </Select.Root>
+                            </Box>
                         </Flex> 
+                        {/*Fecha de inicio y fin */}
+                        <Flex align="center" gap="3">
+                            <Text size="2" style={{width:"140px"}}>
+                                Fecha Inicio:
+                            </Text>
+                            <TextField.Root
+                                type="date"
+                                variant="soft"
+                                color="gray"
+                                style={{flex:1}}
+                                value={datosSustituto.fechaInicio}
+                                min={inconsistenciaActual ? format(new Date(inconsistenciaActual.fechaInicio), 'yyyy-MM-dd') : undefined}
+                                max={inconsistenciaActual ? format(new Date(inconsistenciaActual.fechaFin), 'yyyy-MM-dd') : undefined}
+                                onChange={(e) => setDatosSustituto({...datosSustituto, fechaInicio: e.target.value})}
+                            />
+                        </Flex> 
+                        <Flex align="center" gap="3">
+                            <Text size="2" style={{width:"140px"}}>
+                                Fecha Fin:
+                            </Text>
+                            <TextField.Root
+                                type="date"
+                                variant="soft"
+                                color="gray"
+                                style={{flex:1}}
+                                value={datosSustituto.fechaFin}
+                                min={inconsistenciaActual ? format(new Date(inconsistenciaActual.fechaInicio), 'yyyy-MM-dd') : undefined}
+                                max={inconsistenciaActual ? format(new Date(inconsistenciaActual.fechaFin), 'yyyy-MM-dd') : undefined}
+                                onChange={(e) => setDatosSustituto({...datosSustituto, fechaFin: e.target.value})}
+                            />
+                        </Flex>
                         <Flex justify="center" mt="4">
                             <Button
                                 disabled= {estaPendiente}
@@ -480,6 +674,65 @@ export default function DashboardPlanificador({
                                 style={{ backgroundColor: "#0088CC", cursor: "pointer", width: "150px" }}
                                 >
                                 {estaPendiente ? "Añadiendo..." : "Añadir"}
+                            </Button>
+                        </Flex>
+                    </Flex>
+                </Dialog.Content>
+            </Dialog.Root>
+
+
+            {/*dialogo de bajas medicas*/}
+           <Dialog.Root open={dialogoBaja} onOpenChange={setDialogoBaja}>
+                <Dialog.Content style={{maxWidth: 450}}>
+                    <Dialog.Title align="center" size="5" weight="bold" mb="5">
+                        Registrar Baja Médica
+                    </Dialog.Title>
+                    <Text as="div" size="2" mb="4" color="gray">
+                        Selecciona al empleado y el periodo de tiempo en el que estará ausente por motivos médicos.
+                    </Text>
+
+                    <Flex direction="column" gap="4">
+                        {/* Selector de empleado */}
+                        <Flex direction="column" gap="2">
+                            <Text size="2" weight="bold">Empleado Afectado:</Text>
+                            <Select.Root value={datosBaja.usuarioId} onValueChange={(val) => setDatosBaja({...datosBaja, usuarioId: val})}>
+                                <Select.Trigger placeholder="Seleccione un empleado..." style={{width: '100%'}} />
+                                <Select.Content>
+                                    {plantilla.map(emp => (
+                                        <Select.Item key={emp.id} value={emp.id}>{emp.nombre}</Select.Item>
+                                    ))}
+                                </Select.Content>
+                            </Select.Root>
+                        </Flex>
+
+                        {/* Rango de Fechas */}
+                        <Grid columns="2" gap="3">
+                            <Flex direction="column" gap="2">
+                                <Text size="2" weight="bold">Fecha Inicio:</Text>
+                                <TextField.Root 
+                                    type="date" 
+                                    variant="soft"
+                                    value={datosBaja.fechaInicio}
+                                    onChange={(e) => setDatosBaja({...datosBaja, fechaInicio: e.target.value})}
+                                />
+                            </Flex>
+                            <Flex direction="column" gap="2">
+                                <Text size="2" weight="bold">Fecha Fin:</Text>
+                                <TextField.Root 
+                                    type="date" 
+                                    variant="soft"
+                                    value={datosBaja.fechaFin}
+                                    onChange={(e) => setDatosBaja({...datosBaja, fechaFin: e.target.value})}
+                                />
+                            </Flex>
+                        </Grid>
+
+                        <Flex justify="end" mt="4" gap="3">
+                            <Button variant="soft" color="gray" onClick={() => setDialogoBaja(false)} style={{cursor: "pointer"}}>
+                                Cancelar
+                            </Button>
+                            <Button disabled={estaPendiente} onClick={confirmarRegistrarBaja} style={{ backgroundColor: "#DC2626", cursor: "pointer" }}>
+                                {estaPendiente ? "Registrando..." : "Registrar Baja"}
                             </Button>
                         </Flex>
                     </Flex>

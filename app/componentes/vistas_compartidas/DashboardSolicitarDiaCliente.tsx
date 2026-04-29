@@ -1,7 +1,7 @@
 "use client";
 
 import { Box, Card, Text, Heading, Button, Flex, Select, TextField, TextArea } from "@radix-ui/themes";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { CalendarIcon} from "@radix-ui/react-icons";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -13,12 +13,25 @@ export interface DatosSolicitud{ //export porque son los datos que se enviaran a
     fechaInicio: string;
     fechaFin: string;
     comentario: string;
+    documentoAdjunto?: string;
+    nombreDocumento?: string;
 }
 
 interface SolicitudProps {
     usuarioId: string;
     guardar: (datos: DatosSolicitud) => Promise<{exito: boolean, mensaje: string}>; 
 }
+
+
+const convertirABase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const fileReader = new FileReader();
+        fileReader.readAsDataURL(file);
+        fileReader.onload = () => resolve(fileReader.result as string);
+        fileReader.onerror = (error) => reject(error);
+    });
+};
+
 
 
 export default function DashboardSolicitudDiaCliente({
@@ -32,7 +45,8 @@ export default function DashboardSolicitudDiaCliente({
     const fechaActual = format(new Date(), "yyyy-MM-dd");
     const[estaPendiente, empezarTransicion] = useTransition();
 
-   
+   const[archivo, setArchivo] = useState<File | null> (null);
+   const refArchivo = useRef<HTMLInputElement>(null);
     
     
     const envioFormulario = async (e: React.SyntheticEvent<HTMLFormElement>) =>{
@@ -45,22 +59,34 @@ export default function DashboardSolicitudDiaCliente({
 
         empezarTransicion(async () => {
             try{
+
+                let archivoBase64 = "";
+                let nombreArchivo = "";
+
+                if(archivo){
+                    archivoBase64 = await convertirABase64(archivo)
+                    nombreArchivo = archivo.name;
+                }
                 const resultado = await guardar({
                     usuarioId: usuarioId,
-                    tipoDia: "Vacaciones",
+                    tipoDia: tipoDia,
                     fechaInicio: fecha,
                     fechaFin: fecha,
-                    comentario: comentario
+                    comentario: comentario,
+                    documentoAdjunto: archivoBase64,
+                    nombreDocumento: nombreArchivo
                 });
 
                 if(resultado.exito){
                     toast.success(resultado.mensaje);
                     setFecha("");
                     setComentario("");
+                    setArchivo(null);
                 }else{
                     toast.error(resultado.mensaje);
                 }
             }catch(error){
+                console.log(error);
                 toast.error("Error en la conexión con el servidor al solicitar día.");
             }
         }); 
@@ -150,10 +176,23 @@ export default function DashboardSolicitudDiaCliente({
                             />
                         {/*Botón para añadir documentos*/}
                             <Flex justify="start"  mt="2" gap="2" align="center">
-                                <Button type="button" variant="soft" size="1" color="gray"style={{ cursor: "pointer" }}>
+                                <input 
+                                    type="file" 
+                                    ref={refArchivo}
+                                    style={{ display: "none" }}
+                                    onChange={(e) => setArchivo(e.target.files?.[0] || null)}
+                                    accept=".pdf,.jpg,.jpeg,.png"
+                                />
+                                <Button type="button" variant="soft" size="1" color="gray"style={{ cursor: "pointer" }} onClick={() => refArchivo.current?.click()}>
                                     Adjuntar archivo...
                                 </Button>
-                                <Text size="1" color="gray">(Max 5MB)</Text>
+                                {archivo ? (
+                                    <Text size="1" style={{ color: "#059669", fontWeight: "bold" }}>
+                                        {archivo.name}
+                                    </Text>
+                                ) : (
+                                    <Text size="1" color="gray">(Max 1MB)</Text>
+                                )}
                             </Flex>
                         </Box>
                         {/*Botón de envío*/}

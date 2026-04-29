@@ -29,7 +29,7 @@ interface MesPlantilla {
 export interface Plantilla {
     _id: string;
     usuario: string;
-    año: number;
+    year: number;
     meses: MesPlantilla[];
 }
 
@@ -178,16 +178,35 @@ export default function DashboardCalendarioCliente({
                             <Text size="2" weight={esMismoMes? "bold": "regular"} align="center" style={{"width": "100%"}}>
                                 {numeroDia}
                             </Text>
-                            {/**Definimos el color de la letra, el texto y el color de fondo */}
+                           {/* Definimos el color de la letra, el texto y el color de fondo */}
                             {solicitudAprobada ? (
-                                    <Badge color="purple" variant="soft" style={{width: "100%", justifyContent:"center", textTransform: "capitalize"}}>
-                                        {solicitudAprobada.tipoDia === "Vacaciones" ? "Vac." : "Libre"}
+                                <Flex direction="column" gap="1" style={{ width: "100%" }}>
+                                    {/* Mostrar el tipo de solicitud de forma dinámica */}
+                                    <Badge 
+                                        color={
+                                            solicitudAprobada.tipoDia === "Vacaciones" ? "purple" : 
+                                            solicitudAprobada.tipoDia === "Baja" ? "red" : 
+                                            "indigo" 
+                                        } 
+                                        variant="soft" 
+                                        style={{ width: "100%", justifyContent: "center", fontSize: "10px" }}
+                                    >
+                                        {/* Indicamos el tipo de problema */}
+                                        {solicitudAprobada.tipoDia === "Vacaciones" ? "Vac." : 
+                                         solicitudAprobada.tipoDia === "Baja" ? "B. Med" : 
+                                         solicitudAprobada.tipoDia.substring(0, 6) + "."} 
                                     </Badge>
-                                ) : (
-                                    <Badge color={config.color} variant="soft" style={{width: "100%", justifyContent:"center", backgroundColor: config.colorFondo}}>
-                                        {config.label}
-                                    </Badge>
-                                )}
+                                    
+                                    {/* Mostrar el turno original tachado pequeñito */}
+                                        <Text size="1" align="center" style={{ textDecoration: "line-through", color: "gray" }}>
+                                            {config.label}
+                                        </Text>
+                                </Flex>
+                            ) : (
+                                <Badge color={config.color} variant="soft" style={{ width: "100%", justifyContent: "center", backgroundColor: config.colorFondo }}>
+                                    {config.label}
+                                </Badge>
+                            )}
                         </Flex> 
                         </Card>
                     ); 

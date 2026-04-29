@@ -1,17 +1,34 @@
 "use server"; 
 
+import { decrypt } from "@/lib/auth";
 import { conectarDB } from "@/lib/mongodb";
 import Solicitud from "@/models/solicitud";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 
 export async function cancelarSolicitudAction(idSolicitud: string){
     try{
+
+        const cookieStore = await cookies();
+        const token = cookieStore.get("auth_token")?.value;
+        const sesion = await decrypt(token as string);
+        
+        if (!sesion || !sesion.usuarioId) return { exito: false, mensaje: "Permiso denegado." };
+
         await conectarDB();
 
-        const solicitudBorrada = await Solicitud.findByIdAndDelete(idSolicitud);
-        if(!solicitudBorrada){
+        //comprobamos que exista la solicitud
+        const solicitud = await Solicitud.findById(idSolicitud);
+        if(!solicitud){
             return {exito: false, mensaje: "No se encontró la solicitud"};
         }
+        //comprobamos que la solicitud pertenezca a la sesion
+        if (String(solicitud.usuarioId) !== String(sesion.usuarioId)) {
+            return {exito: false, mensaje: "No tienes permiso para borrar la solicitud de otro empleado."};
+        }
+
+        //eliminamos la solicitud
+        await Solicitud.findByIdAndDelete(idSolicitud);
 
         revalidatePath("/(empleado)/resumen");
 

@@ -5,29 +5,34 @@ import { jwtVerify } from 'jose';
 
 export async function middleware(request: NextRequest){
     
+    if (!process.env.JWT_SECRET) return NextResponse.redirect(new URL('/', request.url));
+
     //obtenemos el token de las cookies
     const token = request.cookies.get('auth_token')?.value;
+    const pathname = request.nextUrl.pathname;
 
-    const isAuthRoot = request.nextUrl.pathname === "/"; //ruta del login
+    const isAuthRoot = pathname === "/"; //ruta del login
 
-    const isProtectedRoute = request.nextUrl.pathname.startsWith("/resumen") ||
-                             request.nextUrl.pathname.startsWith("/calendario") ||
-                             request.nextUrl.pathname.startsWith("/solicitarDia") ||
-                             request.nextUrl.pathname.startsWith("/vacaciones") ||
-                             request.nextUrl.pathname.startsWith("/planificador") ||
-                             request.nextUrl.pathname.startsWith("/rotacion") ||
-                             request.nextUrl.pathname.startsWith("/solicitudes") ||
-                             request.nextUrl.pathname.startsWith("/personal");
+    //separamos las rutas por rol
+    const rutasSupervisor = ["/planificador", "/rotacion", "/personal", "/solicitudes", "/perfil_supervisor", "/resumenSupervisor", "/calendarioSupervisor", "/solicitarDiaSupervisor", "/solicitarVacacionesSupervisor"];
+    const rutasEmpleado = ["/resumen", "/calendario", "/solicitarDia", "/vacaciones", "/perfil"];
     
+    //comprobamos a que ruta se quiere acceder
+    const esRutaSupervisor = rutasSupervisor.some(ruta => pathname === ruta || pathname.startsWith(`${ruta}/`));
+    const esRutaEmpleado = rutasEmpleado.some(ruta => pathname === ruta || pathname.startsWith(`${ruta}/`));
+    const esRutaProtegida = esRutaSupervisor || esRutaEmpleado;
+
 
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-
-    if(isProtectedRoute && !token){
+    
+    //si se quiere acceder a una ruta protegida y no hay token se manda al login
+    if(esRutaProtegida && !token){
         return NextResponse.redirect(new URL('/', request.url));
     }
 
     if(token){
         try {
+            //desciframos el token para leer el rol
              const {payload} = await jwtVerify(token, secret);
 
              if(isAuthRoot){
@@ -37,6 +42,19 @@ export async function middleware(request: NextRequest){
                     return NextResponse.redirect(new URL('/resumen', request.url));
                 }
             }
+
+            //protegemos los roles
+
+            //si intenta acceder a una ruta del supervisor y no es supervisor lo mandamos a resumen de la vista de usuario normal
+            if(esRutaSupervisor && !payload.esSupervisor){
+                return NextResponse.redirect(new URL('/resumen', request.url));
+            }
+
+            //si es supervisor e intenta acceder a una ruta de un empleado normal le redirigimos al planificador
+            if(esRutaEmpleado && payload.esSupervisor){
+                return NextResponse.redirect(new URL('/planificador', request.url));
+            }
+
         }catch(error){
             //o bien el token es falso, esta manipulado o ha caducado, borramos la cookie y redirigimos al login
             const response = NextResponse.redirect(new URL('/', request.url)); 

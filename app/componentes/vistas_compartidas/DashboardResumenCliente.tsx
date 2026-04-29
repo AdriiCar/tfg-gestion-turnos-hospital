@@ -1,5 +1,3 @@
-// app/resumen/page.tsx
-
 "use client";
 
 import { Box, Grid, Card, Text, Heading, Badge, Button, Flex, Separator, Dialog, Callout } from "@radix-ui/themes";
@@ -56,8 +54,9 @@ interface Solicitud {
 interface ResumenProps {
     usuario: Usuario; 
     listaSolicitudes: Solicitud[];
-    proximoTurno: { texto: string; horas: string } | null;
+    proximoTurno:{ texto: string; detalle: string; colorBorde: string; colorFondo: string };
     borrar: (id: string) => Promise<{ exito: boolean; mensaje: string }>;
+    horasTrabajadas: number;
 }
 
 
@@ -65,7 +64,8 @@ export default function DashboardResumenCliente({
     usuario, 
     listaSolicitudes, 
     proximoTurno, 
-    borrar 
+    borrar,
+    horasTrabajadas 
 }: ResumenProps) {
 
     const [estaPendiente, empezarTransicion] = useTransition();
@@ -106,7 +106,7 @@ export default function DashboardResumenCliente({
       <Heading size="6" mb="5" style={{ color: "#1F2937" }}>Mi Resumen</Heading>
 
       {/*Seccion Resumen Datos Usuario*/}
-      <Grid columns={{ initial: "1", sm: "2", md: "2" }} gap="4" mb="6">      {/*Ajustamos las columnas segun el tamaño de la pantalla */}
+      <Grid columns={{ initial: "1", sm: "2", md: "2" }} gap="4" mb="6">      {/*Ajustamos las columnas segun el tamyear de la pantalla */}
         {/* Fila 1 */}
         <Card style={{ padding: "20px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
           <Text as="div" size="4" weight="bold" color="gray" mb="1">Balance Actual</Text>
@@ -115,7 +115,7 @@ export default function DashboardResumenCliente({
 
         <Card style={{ padding: "20px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
           <Text as="div" size="4" weight="bold" color="gray" mb="1">Horas Realizadas (Objetivo)</Text>
-          <Text as="div" size="7" weight="bold" style={{ color: "#1F2937" }}>{usuario?.estadoActual?.horasRealizadas || 0} h</Text>
+          <Text as="div" size="7" weight="bold" style={{ color: "#1F2937" }}>{horasTrabajadas || 0} h</Text>
         </Card>
 
         {/* Fila 2 */}
@@ -131,11 +131,26 @@ export default function DashboardResumenCliente({
       </Grid>
 
       {/* Seccion Proximo Turno */}
-      <Heading size="4" mb="3">Próximo Turno</Heading>
-      <Card style={{ padding: "25px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)", marginBottom: "30px" }}>
-        <Text size="3" weight="bold" style={{ color: "#0088D1" }}>
-          {proximoTurno?.texto} ({proximoTurno?.horas})
-        </Text>
+      <Heading size="4" mb="3">Turno de Hoy</Heading>
+      <Card style={{ 
+          padding: "25px", 
+          boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)", // Sombra un poco más difuminada y elegante
+          marginBottom: "30px",
+          backgroundColor: proximoTurno?.colorFondo,
+          borderLeft: `6px solid {proximoTurno?.colorBorde}`,
+          borderRadius: "12px"
+      }}>
+        <Flex direction="column" gap="2">
+            <Text size="2" weight="bold" style={{ color: "#6B7280", textTransform: "capitalize", letterSpacing: "0.05em" }}>
+               {format(new Date(), "EEEE, d 'de' MMMM", { locale: es })}
+            </Text>
+            <Text as="div" size="5" weight="bold" style={{ color: proximoTurno.colorBorde, letterSpacing: "-0.02em" }}>
+              {proximoTurno.texto}
+            </Text>
+            <Text as="div" size="3" style={{ color: "#4B5563", fontWeight: 500 }}>
+              {proximoTurno.detalle}
+            </Text>
+        </Flex>
       </Card>
 
       {/**Seccion Solicitudes */}
