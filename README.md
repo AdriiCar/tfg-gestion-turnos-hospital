@@ -41,7 +41,7 @@ JWT_SECRET="una_clave_secreta_para_los_tokens"
 EMAIL_USER="tu_correo_gmail_para_enviar_los_datos_al_nuevo_usuario@gmail.com"
 EMAIL_PASS="tu_contraseña_de_aplicacion_gmail" 
 ```
-Nota sobre EMAIL_PASS: No es la contraseña por defecto de tu cuenta de gmail, sino que debes generar una Contraseña de aplicación de 16 caracteres. Para ello, ve a los ajustes de tu cuenta de Google > Seguridad > Verificación en dos pasos > Contraseñas de aplicaciones, y crea una para el proyecto
+**Nota sobre EMAIL_PASS:** No es la contraseña por defecto de tu cuenta de gmail, sino que debes generar una Contraseña de aplicación de 16 caracteres. Para ello, ve a los ajustes de tu cuenta de Google > Seguridad > Verificación en dos pasos > Contraseñas de aplicaciones, y crea una para el proyecto
 
 ## Ejecución del Proyecto
 
