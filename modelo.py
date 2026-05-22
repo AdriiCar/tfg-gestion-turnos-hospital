@@ -125,9 +125,12 @@ def calcula_turnos_con_patrones(datos):
     
     #MINIMIZAMOS LA DIFERENCIA DE LAS SUMAS
     Z = Int("maxima_diferencia")
-
+    dias_vacaciones = 22
+    dias_libres = 6
+    # Sumamos los días y los multiplicamos por las horas  
+    horas_ausencias_retribuidas = (dias_vacaciones + dias_libres) * 8
     for i, emp in enumerate(empleados):
-        horas_objetivo = emp["horasContrato"]
+        horas_objetivo = emp["horasContrato"] + horas_ausencias_retribuidas
 
         #Obtenemos las horas que trabajara el usuario i con patron asignado p empezando en el desfase d mediante las horas que anualmente corresponden al patron p empezando en el desfase d
         horas_empleado = sum(x[i][p][d] * horas_anuales_patrones[p][d] for p in range(num_patrones) for d in range(long_secuencias[p]))
@@ -160,7 +163,7 @@ def calcula_turnos_con_patrones(datos):
                         horas_usuarios.append({
                             "usuarioId": ObjectId(emp["id"]),
                             "horasPrevistas": horas_empleado,
-                            "balanceAnual": horas_empleado - emp["horasContrato"]
+                            "balanceAnual": horas_empleado - (emp["horasContrato"] + horas_ausencias_retribuidas)
 
                         })
 

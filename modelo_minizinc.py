@@ -23,19 +23,48 @@ def rotaciones_minizinc(rol, empleados_rol, cobertura, horas_M, horas_N, longitu
     horas_contrato = [int(e["horasContrato"]) for e in empleados_rol]
 
 
-    solver = Solver.lookup("gecode")
+    solver = Solver.lookup("chuffed")
     instancia = Instance(solver, modelo_minizinc)
+
+   
+    
+    #Obtenemos las horas que deberia trabajar cada empleado en un ciclo del patron para cumplir con su objetivo anual, redondeamos y evitamos decimales
+    horas_por_usuario = []
+    
+    dias_vacaciones = 22
+    dias_libres = 6
+    horas_por_ausencia = 8
+    horas_ausencias = (dias_vacaciones + dias_libres) * horas_por_ausencia 
+    
+    for contrato in horas_contrato:
+        objetivo_anual = contrato + horas_ausencias
+
+        horas_usuario_ciclo = (objetivo_anual * longitud_patron) / NUM_DIAS
+        horas_por_usuario.append(round(horas_usuario_ciclo))
+
+    #Matriz de desfases[dia_actual][desfase] da el indice 
+    desfases_matriz = []
+    for d_actual in range(1, longitud_patron+1):
+        fila = []
+        for desfase in range(1, longitud_patron+1):
+            indice = ((d_actual - desfase) % longitud_patron) + 1 #En minizinc empieza en el dia 1 no en 0
+            fila.append(indice)
+        desfases_matriz.append(fila)
+
     #Instanciamos los valores de entrada al modelo
     instancia["num_empleados"] = len(empleados_rol)
     instancia["num_turnos_base"] = num_patrones
     instancia["longitud_patron"] = longitud_patron
-    instancia["dias_anuales"] = NUM_DIAS
+    #instancia["dias_anuales"] = NUM_DIAS
     instancia["horas_M"] = int(horas_M)
     instancia["horas_N"] = int(horas_N)
     instancia["cob_M"] = int(cob_M)
     instancia["cob_N"] = int(cob_N)
     instancia["es_senior"] = es_senior
-    instancia["horas_contrato"] = horas_contrato
+    instancia["max_dias_trabajados"] = 5
+    instancia["horas_por_usuario"] = horas_por_usuario
+    instancia["desfases_matriz"] = desfases_matriz
+    #instancia["horas_contrato"] = horas_contrato
 
     resultado = instancia.solve(timeout=timedelta(seconds=60))
     if resultado.solution:
@@ -43,40 +72,6 @@ def rotaciones_minizinc(rol, empleados_rol, cobertura, horas_M, horas_N, longitu
     
     raise Exception(f"No se pudo asignar turnos para {rol}.")
 
-
-    """
-    solver_ids = ["gecode"]
-    errores = []
-
-    for solver_id in solver_ids:
-        try:
-            #Probamos cada solver
-            solver = Solver.lookup(solver_id)
-            instancia = Instance(solver, modelo_minizinc)
-            #Instanciamos los valores de entrada al modelo
-            instancia["num_empleados"] = len(empleados_rol)
-            instancia["num_turnos_base"] = num_patrones
-            instancia["longitud_patron"] = longitud_patron
-            instancia["dias_anuales"] = NUM_DIAS
-            instancia["horas_M"] = horas_M
-            instancia["horas_N"] = horas_N
-            instancia["cob_M"] = cob_M
-            instancia["cob_N"] = cob_N
-            instancia["es_senior"] = es_senior
-            instancia["horas_contrato"] = horas_contrato
-
-            resultado = instancia.solve(timeout=timedelta(seconds=600))
-            if resultado.solution:
-                return resultado.solution
-
-            errores.append(f"{solver_id}: sin solucion ({resultado.status})")
-        except MiniZincError as e:
-            errores.append(f"{solver_id}: {e}")
-        except Exception as e:
-            errores.append(f"{solver_id}: {e}")
-
-    raise Exception(f"No se pudo asignar turnos para {rol}.")
-    """
 
 def calcular_turnos_sin_patrones(datos):
 
@@ -175,10 +170,13 @@ def calcular_turnos_sin_patrones(datos):
                             meses[mes_num].append({"dia": dia_num, "turno": turno_asignado})
                         
                         dias_vacaciones = 22
-                        horas_vacaciones = dias_vacaciones * 7
+                        dias_libres = 6
+                        horas_por_ausencia = 8
+
+                        horas_ausencias = (dias_vacaciones + dias_libres) * horas_por_ausencia
 
                         horas_contrato = emp["horasContrato"]
-                        balance = horas_totales - (horas_contrato + horas_vacaciones)
+                        balance = horas_totales - (horas_contrato + horas_ausencias)
 
                         horas_usuarios.append({
                             "usuarioId": ObjectId(emp["id"]),

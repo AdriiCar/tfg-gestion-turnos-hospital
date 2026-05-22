@@ -1,8 +1,10 @@
+include "globals.mzn";
+
 %PARAMETROS DE ENTRADA
 int: num_empleados;
 int: num_turnos_base;
 int: longitud_patron;
-int: dias_anuales;
+int: max_dias_trabajados;
 
 set of int: P = 1..num_empleados; %conjuntos de empleados a los que asignar un turno
 set of int: T = 1..num_turnos_base; %conjuntos de turnos a asignar
@@ -14,9 +16,8 @@ int: L = 3;
 set of int: O = {M , N ,L}; %Cada uno de los turnos que se pueden asignar
 
 
-
-%usuarios de prueba;
-array[P] of int: horas_contrato;
+array[P] of int: horas_por_usuario;
+array[D, D] of int: desfases_matriz;
 array[P] of int: es_senior;
 
 %cobertura neesaria
@@ -60,25 +61,27 @@ constraint forall(t in T)(
   ((turnos[t,longitud_patron] == N) -> (turnos[t, 1] != M) ) 
   
   /\%ponemos un maximo de 5 dias trabajados
-  sum(d in D)(turnos[t,d] != L) <= 5
+  count(d in D)(turnos[t,d] != L) <= max_dias_trabajados
 );
 
-%3. EVITAR SIMETRIAS -> MMMLL NNLLL es igual a NNLLL MMMLL
+%3. EVITAR SIMETRIAS -> MMMLL NNLLL es igual a NNLLL MMMLL y  MMLL es igual a LLMM
 constraint forall(t in 1..num_turnos_base-1)(
-  sum(d in D)(turnos[t,d] != L) >= sum(d in D)(turnos[t+1, d] != L)
+  lex_greatereq([turnos[t,d] | d in D], [turnos[t+1, d] | d in D])
 );
 
 %4.Para cada asignacion de un usuario rellenamos la variable dia
 
 constraint forall(p in P, t in T, desf in D)(
-  asignacion[p,t,desf] -> forall(d_actual in D)(dia[p,d_actual] == turnos[t, ((d_actual-desf) mod longitud_patron + longitud_patron) mod longitud_patron + 1])
+  asignacion[p,t,desf] -> forall(d_actual in D)(
+    dia[p, d_actual] == turnos[t, desfases_matriz[d_actual, desf]]
+  )
 );
 
 %5. COBERTURA DIARIA Y EXPERIENCIA -> comprobamos si se llega a los minimos requeridos por turno y aseguramos no dejar solo en planta a juniors
 
 constraint forall(d_actual in D) (
-    sum(p in P) (bool2int(dia[p, d_actual] == M)) >= cob_M /\
-    sum(p in P) (bool2int(dia[p, d_actual] == N)) >= cob_N
+    count(p in P) (dia[p, d_actual] == M) >= cob_M /\
+    count(p in P) (dia[p, d_actual] == N) >= cob_N
     /\
     (cob_M > 0 -> sum(p in P where es_senior[p]==1)(bool2int(dia[p,d_actual] == M)) >= 1) /\
     (cob_N > 0 -> sum(p in P where es_senior[p]==1)(bool2int(dia[p,d_actual] == N)) >= 1)
@@ -88,16 +91,17 @@ constraint forall(d_actual in D) (
 
 constraint forall(p in P) (
     maxima_diferencia >= abs(
-        (
-            (
-                sum(d_actual in D) (
-                    bool2int(dia[p, d_actual] == M) * horas_M + 
-                    bool2int(dia[p, d_actual] == N) * horas_N
-                ) * dias_anuales 
-            ) div longitud_patron 
-        ) 
-        - horas_contrato[p] 
+       sum(d_actual in D) (
+        bool2int(dia[p, d_actual] == M) * horas_M + bool2int(dia[p,d_actual] == N) * horas_N
+       ) - horas_por_usuario[p]
     ) 
 );
 
-solve minimize maxima_diferencia;
+solve :: seq_search([
+    % 1º: Diseña los patrones base primero (lo más difícil)
+    int_search([turnos[t,d] | t in T, d in D], first_fail, indomain_min),
+    
+    % 2º: Una vez tienes los patrones, asigna a la gente
+    bool_search([asignacion[p,t,d] | p in P, t in T, d in D], input_order, indomain_max)
+]) minimize maxima_diferencia;
+

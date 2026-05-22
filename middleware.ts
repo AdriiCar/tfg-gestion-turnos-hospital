@@ -66,7 +66,8 @@ export async function middleware(request: NextRequest){
     return NextResponse.next(); //si todo es correcto se le deja pasar
 }
 
-
+//excluimos la ruta api que solo contiene datos de inicialización
+//excluimos rutas estáticas de next
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+    matcher: ['/((?!api|_next/static|_next/image).*)'],
 };

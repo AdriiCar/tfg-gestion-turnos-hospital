@@ -5,6 +5,8 @@ import { conectarDB } from "@/lib/mongodb";
 import Solicitud from "@/models/solicitud";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import Usuario from "@/models/usuario";
+
 
 export async function cancelarSolicitudAction(idSolicitud: string){
     try{
@@ -25,6 +27,13 @@ export async function cancelarSolicitudAction(idSolicitud: string){
         //comprobamos que la solicitud pertenezca a la sesion
         if (String(solicitud.usuarioId) !== String(sesion.usuarioId)) {
             return {exito: false, mensaje: "No tienes permiso para borrar la solicitud de otro empleado."};
+        }
+
+        //si la solicitud era de libre disposición, le devolvemos el día al usuario
+        if (solicitud.tipoDia === "Libre Disposición") {
+            await Usuario.findByIdAndUpdate(sesion.usuarioId, {
+                $inc: { "estadoActual.diasLibresRestantes": 1 }
+            });
         }
 
         //eliminamos la solicitud

@@ -5,7 +5,7 @@ import { conectarDB } from "@/lib/mongodb";
 import Solicitud from "@/models/solicitud";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
-
+import Usuario from "@/models/usuario";
 
 interface SolicitudCliente {
     usuarioId: string;
@@ -33,6 +33,20 @@ export async function crearSolicitudAction(datosSolicitud: SolicitudCliente){
              return { exito: false, mensaje: "Esta solicitud no pertenece a tu usuario." };
         }
         await conectarDB();
+
+        //comprobamos si la solicitud es de libre disposición y si le quedan aún días para solicitarlos
+        const usuario = await Usuario.findById(datosSolicitud.usuarioId);
+
+        if(datosSolicitud.tipoDia === "Libre Disposición"){
+            if(usuario.estadoActual.diasLibresRestantes <= 0){
+                return {exito: false, mensaje: "No te quedan días de Libre Disposición"};
+            }
+
+            usuario.estadoActual.diasLibresRestantes -= 1;
+            await usuario.save();
+        }
+
+
         //creamos la solicitud
         await Solicitud.create({
             usuarioId: datosSolicitud.usuarioId,

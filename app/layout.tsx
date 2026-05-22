@@ -23,12 +23,8 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className} style={{ margin: 0, padding: 0 }}>
       <Toaster 
-        position="top-center" 
+        position="top-right" 
         richColors 
-        style={{
-          top: '50%',
-          transform: 'translateY(-50%)' 
-        }}
       /> 
        <Theme appearance="light" accentColor="blue" radius="medium">
           {children}
