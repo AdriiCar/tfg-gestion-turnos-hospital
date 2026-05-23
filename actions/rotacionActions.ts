@@ -15,6 +15,7 @@ import { cookies } from "next/headers";
 import crearHuecoEstructural from "../lib/utilidadesPlanificador"
 import Solicitud from "@/models/solicitud";
 import { addDays, endOfYear, startOfDay } from "date-fns";
+import { calcularHorasExtraSustituciones } from "@/lib/horasSustituciones";
 
 
 //guardar el cambio de la cobertura y las horas
@@ -232,12 +233,18 @@ export async function agregarUsuarioGrupoAction(grupoId: string, correo: string)
             {upsert: true, new: true}
         );
 
-        //Actualizamos sus horas y balance
+        //debemos tener en cuenta las horas de ausencia (vacaciones + días libres) a 8 horas al día
+        const diasVacaciones = 22;
+        const diasLibres = usuario.datosContractuales?.diasLibresAnuales || 6;
+        const horasAusencias = (diasVacaciones + diasLibres) * 8;
+
+        //Actualizamos sus horas y balance como hace el worker
         const horasContrato = usuario.datosContractuales?.horasContrato;
+        const horasExtra = await calcularHorasExtraSustituciones(usuario.correo, horasM, horasN, year);
         await Usuario.findByIdAndUpdate(usuario._id, {
             $set: {
                 "estadoActual.horasPrevistas": horas_previstas,
-                "estadoActual.balanceAnual": horas_previstas - horasContrato
+                "estadoActual.balanceAnual": (horas_previstas + horasExtra) - (horasContrato + horasAusencias)
             }
         });
         
@@ -331,6 +338,8 @@ export async function quitarUsuarioGrupoAction(grupoId: string, empleadoId: stri
         if(String(existe_usuario.plantaId) !== String(sesion.plantaId)) {
             return {exito: false, mensaje: "El usuario a eliminar no pertenece a nuestra planta"};
         }
+        const conf = await Configuracion.findOne({plantaId: sesion.plantaId});
+        if(!conf) return {exito: false, mensaje: "No se encontró la configuración de la planta"};
 
         //lo sacamos del grupo
         await Rotacion.findByIdAndUpdate(grupoId, {
@@ -402,15 +411,19 @@ export async function quitarUsuarioGrupoAction(grupoId: string, empleadoId: stri
             huecoId = String(nuevoHuecoId);
         }
 
-        //le actualizamos las horas previstas y el balance
-        await Usuario.findByIdAndUpdate(empleadoId,
-            {
-                $set: {
-                    "estadoActual.horasPrevistas": 0,
-                    "estadoActual.balanceAnual": 0 - horasContrato
-                }
+        const horasM = conf.parametrosGlobales.horasTurnoM;
+        const horasN = conf.parametrosGlobales.horasTurnoN;
+        //tenemos en cuenta los dias libres que afectan al balance
+        const diasLibres = existe_usuario.datosContractuales?.diasLibresAnuales || 6;
+        const horasAusencias = (22 + diasLibres) * 8;
+        //horas de las sustitciones
+        const horasExtra = await calcularHorasExtraSustituciones(existe_usuario.correo, horasM, horasN, yearActual);
+        await Usuario.findByIdAndUpdate(empleadoId, {
+            $set: {
+                "estadoActual.horasPrevistas": 0,
+                "estadoActual.balanceAnual": horasExtra - (horasContrato + horasAusencias)
             }
-        );
+        });
 
         //comprobamos las relgas desde hoy a fin de año
         const finyear = new Date(yearActual, 11, 31);

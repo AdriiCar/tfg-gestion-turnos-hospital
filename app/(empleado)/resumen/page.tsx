@@ -9,6 +9,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { decrypt } from "@/lib/auth";
 import Configuracion from "@/models/configuracion";
+import { calcularHorasExtraSustituciones } from "@/lib/horasSustituciones";
 
 const calcularProximoTurno = (plantilla: any, solicitudes: any [], horasM: number, horasN: number) => {
     const hoy = new Date();
@@ -132,13 +133,31 @@ export default async function ResumenPage() {
     // calculamos el proximo turno con las horas reales 
     const proximoTurno = calcularProximoTurno(plantilla, solicitudes, horasM, horasN);
 
+    const horasExtraSustituciones = await calcularHorasExtraSustituciones(usuario.correo, horasM, horasN, yearActual);
+
+    const horasTrabajadas = calcularHorasTrabajadas(plantilla, horasM, horasN) + horasExtraSustituciones;
+
+    const horasPrevistas = usuario.estadoActual?.horasPrevistas || 0;
+
+    //calculamos el nuevo balance ya que si cubre ausencias tendra un mayor computo
+    const horasContrato = usuario.datosContractuales?.horasContrato || 1492;
+    const diasVacaciones = 22;
+    const diasLibres = usuario.datosContractuales?.diasLibresAnuales || 6;
+    const horasAusencias = (diasVacaciones + diasLibres) * 8;
+
+    const balanceNuevo = (horasPrevistas + horasExtraSustituciones) - (horasContrato + horasAusencias);
+    
+    await Usuario.findByIdAndUpdate(usuarioId, {
+        "estadoActual.balanceAnual": balanceNuevo
+    });
+
+    if (usuario && usuario.estadoActual) {
+        usuario.estadoActual.balanceAnual = balanceNuevo;
+    }
+    
     //Serializamos los datos para que pasen de BD a React sin errores
     const usuarioSerializado = JSON.parse(JSON.stringify(usuario));
     const solicitudesSerializadas = JSON.parse(JSON.stringify(solicitudes));
-
-   
-
-    const horasTrabajadas = calcularHorasTrabajadas(plantilla, horasM, horasN);
 
     return (
         <DashboardResumenVisual 

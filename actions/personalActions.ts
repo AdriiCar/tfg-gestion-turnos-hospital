@@ -1,10 +1,12 @@
 "use server";
 
 import { decrypt } from "@/lib/auth";
+import { calcularHorasExtraSustituciones } from "@/lib/horasSustituciones";
 import { enviarCorreoBienvenida } from "@/lib/mailer";
 import { conectarDB } from "@/lib/mongodb";
 import { comprobarReglas } from "@/lib/motorReglas";
 import crearHuecoEstructural from "@/lib/utilidadesPlanificador";
+import Configuracion from "@/models/configuracion";
 import Incidencia from "@/models/incidencia";
 import Plantilla from "@/models/plantilla";
 import Rotacion from "@/models/rotacion";
@@ -28,6 +30,19 @@ export interface DatosEmpleado {
     plantaId: string;
     esSupervisor: boolean;
 }
+
+
+const calcularHorasPrevistasTotales = (plantilla: any, horasM: number, horasN: number) => {
+    if (!plantilla || !plantilla.meses) return 0;
+    let horasTotales = 0;
+    for (const mesData of plantilla.meses) {
+        for (const diaData of mesData.dias) {
+            if (diaData.turno === "M") horasTotales += horasM;
+            else if (diaData.turno === "N") horasTotales += horasN;
+        }
+    }
+    return horasTotales;
+};
 
 export async function crearEmpleadoAction(datos: DatosEmpleado){
     try{
@@ -64,8 +79,8 @@ export async function crearEmpleadoAction(datos: DatosEmpleado){
                 fechaFin: datos.fechaFin || null
             },
             estadoActual: {
-                horasPrevistas: datos.horasContrato, //inicialmente hasta que tenga un horario establecido las previstas son las de contrato
-                balanceAnual: -datos.horasContrato,
+                horasPrevistas: 0,
+                balanceAnual: 0 - (datos.horasContrato + (22 + 6) * 8), //las horas que debe mas las de vacaciones que debe compensar
                 diasLibresRestantes: 6
             },
             esNuevoUsuario: true
@@ -91,7 +106,6 @@ export async function crearEmpleadoAction(datos: DatosEmpleado){
         return {exito: false, mensaje: "Error en el servidor al crear el usuario"};
     }
 }
-
 
 export async function modificarEmpleadoAction(idUsuario: string, datos:DatosEmpleado){
     try{
@@ -120,9 +134,18 @@ export async function modificarEmpleadoAction(idUsuario: string, datos:DatosEmpl
 
         const hayCambioDeExperiencia = datos.nivel && usuarioAModificar.nivel !== datos.nivel;
 
-        //comprobamos el nuevo balance
-        const horasPrevistasActuales = usuarioAModificar.estadoActual?.horasPrevistas || 0;
-        const nuevoBalance = horasPrevistasActuales - datos.horasContrato;
+        //comprobamos el nuevo balancecon las horas de sustitucion
+        const yearActual = new Date().getFullYear();
+        const plantilla = await Plantilla.findOne({ usuario: idUsuario, year: yearActual }).lean();
+        const conf = await Configuracion.findOne({ plantaId: sesion.plantaId }).lean();
+        const horasM = conf?.parametrosGlobales?.horasTurnoM || 12;
+        const horasN = conf?.parametrosGlobales?.horasTurnoN || 10;
+
+        const horasPrevistas = calcularHorasPrevistasTotales(plantilla, horasM, horasN);
+        const horasExtra = await calcularHorasExtraSustituciones(usuarioAModificar.correo, horasM, horasN, yearActual);
+        const diasLibres = usuarioAModificar.datosContractuales?.diasLibresAnuales || 6;
+        const horasAusencias = (22 + diasLibres) * 8;
+        const nuevoBalance = (horasPrevistas + horasExtra) - (datos.horasContrato + horasAusencias);
         //actualizamos al usuario con los nuevos datos
         await Usuario.findByIdAndUpdate(idUsuario, {
             nombre: datos.nombre,
@@ -262,8 +285,6 @@ export async function eliminarEmpleadoAction(idUsuario: string){
         }
 
 
-
-
         // buscamos en qué plantas iba a hacer sustituciones este empleado -> puede ser sustituto en otras plantas
         const susSustituciones = await Sustitucion.find({ sustitutoCorreo: correoEmpleado }).select('plantaId');
         const plantasAfectadas = new Set<string>();
@@ -293,8 +314,6 @@ export async function eliminarEmpleadoAction(idUsuario: string){
             {$pull: {empleados:idUsuario}}
         )
 
-        
-        
         
         //le eliminamos
         await Usuario.findByIdAndDelete(idUsuario);

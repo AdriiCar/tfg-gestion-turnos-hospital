@@ -109,8 +109,16 @@ export default function DashboardResumenCliente({
       <Grid columns={{ initial: "1", sm: "2", md: "2" }} gap="4" mb="6">      {/*Ajustamos las columnas segun el tamyear de la pantalla */}
         {/* Fila 1 */}
         <Card style={{ padding: "20px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
-          <Text as="div" size="4" weight="bold" color="gray" mb="1">Balance Actual</Text>
-          <Text as="div" size="7" weight="bold" style={{ color: "#10B981" }}>+{usuario?.estadoActual?.balanceAnual || 0} h</Text>
+            <Text as="div" size="4" weight="bold" color="gray" mb="1">Balance Actual</Text>
+            <Text 
+                as="div" 
+                size="7" 
+                weight="bold" 
+                style={{ color: (usuario?.estadoActual?.balanceAnual || 0) >= 0 ? "#10B981" : "#EF4444" }}
+            >
+                {(usuario?.estadoActual?.balanceAnual || 0) > 0 ? "+" : ""}
+                {usuario?.estadoActual?.balanceAnual || 0} h
+            </Text>
         </Card>
 
         <Card style={{ padding: "20px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
