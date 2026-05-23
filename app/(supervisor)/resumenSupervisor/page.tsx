@@ -143,7 +143,7 @@ export default async function ResumenPage() {
     const horasContrato = usuario.datosContractuales?.horasContrato || 1492;
     const diasVacaciones = 22;
     const diasLibres = usuario.datosContractuales?.diasLibresAnuales || 6;
-    const horasAusencias = (diasVacaciones + diasLibres) * 8;
+    const horasAusencias = (diasVacaciones + diasLibres) * 7;
 
     const balanceNuevo = (horasPrevistas + horasExtraSustituciones) - (horasContrato + horasAusencias);
     

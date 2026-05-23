@@ -33,7 +33,7 @@ def rotaciones_minizinc(rol, empleados_rol, cobertura, horas_M, horas_N, longitu
     
     dias_vacaciones = 22
     dias_libres = 6
-    horas_por_ausencia = 8
+    horas_por_ausencia = 7
     horas_ausencias = (dias_vacaciones + dias_libres) * horas_por_ausencia 
     
     for contrato in horas_contrato:
@@ -171,7 +171,7 @@ def calcular_turnos_sin_patrones(datos):
                         
                         dias_vacaciones = 22
                         dias_libres = 6
-                        horas_por_ausencia = 8
+                        horas_por_ausencia = 7
 
                         horas_ausencias = (dias_vacaciones + dias_libres) * horas_por_ausencia
 

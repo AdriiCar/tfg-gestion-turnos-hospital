@@ -105,7 +105,7 @@ const calcularBalance = async (
     const horasPrevistas = empleado.estadoActual?.horasPrevistas || 0;
     const horasContrato = empleado.datosContractuales?.horasContrato || 0;
     const diasLibres = (empleado.datosContractuales as any)?.diasLibresAnuales || 6;
-    const horasAusencias = (22 + diasLibres) * 8;
+    const horasAusencias = (22 + diasLibres) * 7;
 
     const balance = (horasPrevistas + horasExtra) - (horasContrato + horasAusencias);
     return {balance, horasExtra};

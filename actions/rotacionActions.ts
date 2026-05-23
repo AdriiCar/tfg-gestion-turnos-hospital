@@ -233,10 +233,10 @@ export async function agregarUsuarioGrupoAction(grupoId: string, correo: string)
             {upsert: true, new: true}
         );
 
-        //debemos tener en cuenta las horas de ausencia (vacaciones + días libres) a 8 horas al día
+        //debemos tener en cuenta las horas de ausencia (vacaciones + días libres) a 7 horas al día
         const diasVacaciones = 22;
         const diasLibres = usuario.datosContractuales?.diasLibresAnuales || 6;
-        const horasAusencias = (diasVacaciones + diasLibres) * 8;
+        const horasAusencias = (diasVacaciones + diasLibres) * 7;
 
         //Actualizamos sus horas y balance como hace el worker
         const horasContrato = usuario.datosContractuales?.horasContrato;
@@ -415,7 +415,7 @@ export async function quitarUsuarioGrupoAction(grupoId: string, empleadoId: stri
         const horasN = conf.parametrosGlobales.horasTurnoN;
         //tenemos en cuenta los dias libres que afectan al balance
         const diasLibres = existe_usuario.datosContractuales?.diasLibresAnuales || 6;
-        const horasAusencias = (22 + diasLibres) * 8;
+        const horasAusencias = (22 + diasLibres) * 7;
         //horas de las sustitciones
         const horasExtra = await calcularHorasExtraSustituciones(existe_usuario.correo, horasM, horasN, yearActual);
         await Usuario.findByIdAndUpdate(empleadoId, {

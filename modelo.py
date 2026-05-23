@@ -128,7 +128,7 @@ def calcula_turnos_con_patrones(datos):
     dias_vacaciones = 22
     dias_libres = 6
     # Sumamos los días y los multiplicamos por las horas  
-    horas_ausencias_retribuidas = (dias_vacaciones + dias_libres) * 8
+    horas_ausencias_retribuidas = (dias_vacaciones + dias_libres) * 7
     for i, emp in enumerate(empleados):
         horas_objetivo = emp["horasContrato"] + horas_ausencias_retribuidas
 

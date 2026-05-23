@@ -80,7 +80,7 @@ export async function crearEmpleadoAction(datos: DatosEmpleado){
             },
             estadoActual: {
                 horasPrevistas: 0,
-                balanceAnual: 0 - (datos.horasContrato + (22 + 6) * 8), //las horas que debe mas las de vacaciones que debe compensar
+                balanceAnual: 0 - (datos.horasContrato + (22 + 6) * 7), //las horas que debe mas las de vacaciones que debe compensar
                 diasLibresRestantes: 6
             },
             esNuevoUsuario: true
@@ -144,7 +144,7 @@ export async function modificarEmpleadoAction(idUsuario: string, datos:DatosEmpl
         const horasPrevistas = calcularHorasPrevistasTotales(plantilla, horasM, horasN);
         const horasExtra = await calcularHorasExtraSustituciones(usuarioAModificar.correo, horasM, horasN, yearActual);
         const diasLibres = usuarioAModificar.datosContractuales?.diasLibresAnuales || 6;
-        const horasAusencias = (22 + diasLibres) * 8;
+        const horasAusencias = (22 + diasLibres) * 7;
         const nuevoBalance = (horasPrevistas + horasExtra) - (datos.horasContrato + horasAusencias);
         //actualizamos al usuario con los nuevos datos
         await Usuario.findByIdAndUpdate(idUsuario, {
