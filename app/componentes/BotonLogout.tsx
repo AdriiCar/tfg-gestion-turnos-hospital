@@ -2,7 +2,7 @@
 
 import { ExitIcon } from "@radix-ui/react-icons";
 import { Button } from "@radix-ui/themes";
-import { cerrarSesionAction } from "@/actions/logoutAction"; // Ajusta la ruta a donde hayas puesto la acción
+import { cerrarSesionAction } from "@/actions/logoutAction"; 
 import { useTransition } from "react";
 
 export default function BotonLogout() {
