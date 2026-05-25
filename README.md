@@ -86,6 +86,7 @@ Este modelo respeta secuencias cíclicas estrictas definidas por el usuario.
 ### 2. Modelo Sin Patrones Base (MiniZinc)
 Si no defines patrones, el sistema usará un modelo de optimización mediante restricciones (Constraint Programming).
 * **Cómo probarlo:** Simplemente establece la demanda de cobertura diaria en la planta y desmarca la opción de patrones.
-* El algoritmo generará secuencias personalizadas para cada trabajador, optimizando los balances horarios y asegurando la mezcla de experiencia (Senior/Junior).
+* El algoritmo generará secuencias personalizadas para cada trabajador, optimizando los balances horarios y asegurando la mezcla de experiencia (Senior/Junior). 
+* Nota sobre el timeout: Actualmente, el solver tiene un timeout de 1 minuto por rol configurado para realizar pruebas rápidas al calcular los turnos. Para quitar este límite de tiempo y permitir una búsqueda exhaustiva, modifica el archivo modelo_minizinc.py y deja la instrucción de resolución simplemente como: resultado = instancia.solve()
 
 
